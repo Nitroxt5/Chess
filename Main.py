@@ -49,12 +49,13 @@ def main():
                 if len(clicks) == 2:
                     move = Engine.Move(clicks[0], clicks[1], gameState.board)
                     # print(move.getMoveNotation())
-                    if move in validMoves:
-                        gameState.makeMove(move)
-                        moveMade = True
-                        selectedSq = ()
-                        clicks = []
-                    else:
+                    for i in range(len(validMoves)):
+                        if move == validMoves[i]:
+                            gameState.makeMove(validMoves[i])
+                            moveMade = True
+                            selectedSq = ()
+                            clicks = []
+                    if not moveMade:
                         clicks = [selectedSq]
             elif e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_u:
