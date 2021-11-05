@@ -77,6 +77,8 @@ class GameState:
                 else:
                     self.board[move.endRow][move.endColumn - 2] = self.board[move.endRow][move.endColumn + 1]
                     self.board[move.endRow][move.endColumn + 1] = "--"
+            self.checkmate = False
+            self.stalemate = False
 
     def updateCastleRights(self, move):
         if move.movedPiece == "wK":
@@ -431,6 +433,9 @@ class Move:
         if isinstance(other, Move):
             return self.moveID == other.moveID
         return False
+
+    def __repr__(self):
+        return self.getMoveNotation()
 
     def getSquareNotation(self, row, column):
         return self.columnToLetter[column] + self.rowToNumber[row]
