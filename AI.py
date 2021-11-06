@@ -12,64 +12,64 @@ def randomMoveAI(validMoves):
 
 
 # Жадный алгоритм (глубина 1)
-# def greedyMoveAI(gameState, validMoves):
-#     # turn = 1 if gameState.whiteTurn else -1
-#     maxScore = -CHECKMATE
-#     bestMove = None
-#     for playerMove in validMoves:
-#         gameState.makeMove(playerMove)
-#         if gameState.checkmate:
-#             score = CHECKMATE
-#         elif gameState.stalemate:
-#             score = STALEMATE
-#         else:
-#             score = abs(scoreBoard(gameState))
-#         if score > maxScore:
-#             maxScore = score
-#             bestMove = playerMove
-#         gameState.undoMove()
-#     return bestMove
+def greedyMoveAI(gameState, validMoves):
+    maxScore = -CHECKMATE
+    bestMove = None
+    for playerMove in validMoves:
+        gameState.makeMove(playerMove)
+        if gameState.checkmate:
+            score = CHECKMATE
+        elif gameState.stalemate:
+            score = STALEMATE
+        else:
+            score = abs(scoreBoard(gameState))
+        if score > maxScore:
+            maxScore = score
+            bestMove = playerMove
+        gameState.undoMove()
+    return bestMove
 
 
-# Жадный алгоритм с применением нерекурсиного минимакса (медленный) (глубина 2)
-# def greedyMoveAI(gameState, validMoves):
-#     opponentMinMaxScore = CHECKMATE + 1
-#     bestPlayerMove = None
-#     random.shuffle(validMoves)
-#     for playerMove in validMoves:
-#         gameState.makeMove(playerMove)
-#         opponentsMoves = gameState.getValidMoves()
-#         if gameState.checkmate:
-#             bestPlayerMove = playerMove
-#             gameState.undoMove()
-#             break
-#         elif gameState.stalemate:
-#             opponentsMaxScore = STALEMATE
-#         else:
-#             opponentsMaxScore = -CHECKMATE
-#         for opponentsMove in opponentsMoves:
-#             gameState.makeMove(opponentsMove)
-#             gameState.getValidMoves()
-#             if gameState.checkmate:
-#                 score = CHECKMATE
-#             elif gameState.stalemate:
-#                 score = STALEMATE
-#             else:
-#                 score = abs(scoreBoard(gameState))
-#             if score > opponentsMaxScore:
-#                 opponentsMaxScore = score
-#             gameState.undoMove()
-#         if opponentsMaxScore < opponentMinMaxScore:
-#             opponentMinMaxScore = opponentsMaxScore
-#             bestPlayerMove = playerMove
-#         gameState.undoMove()
-#     return bestPlayerMove
+# Жадный алгоритм с применением нерекурсиного минимакса (глубина 2)
+def greedyMinMaxMoveAI(gameState, validMoves):
+    opponentMinMaxScore = CHECKMATE + 1
+    bestPlayerMove = None
+    random.shuffle(validMoves)
+    for playerMove in validMoves:
+        gameState.makeMove(playerMove)
+        opponentsMoves = gameState.getValidMoves()
+        if gameState.checkmate:
+            bestPlayerMove = playerMove
+            gameState.undoMove()
+            break
+        elif gameState.stalemate:
+            opponentsMaxScore = STALEMATE
+        else:
+            opponentsMaxScore = -CHECKMATE
+        for opponentsMove in opponentsMoves:
+            gameState.makeMove(opponentsMove)
+            gameState.getValidMoves()
+            if gameState.checkmate:
+                score = CHECKMATE
+            elif gameState.stalemate:
+                score = STALEMATE
+            else:
+                score = abs(scoreBoard(gameState))
+            if score > opponentsMaxScore:
+                opponentsMaxScore = score
+            gameState.undoMove()
+        if opponentsMaxScore < opponentMinMaxScore:
+            opponentMinMaxScore = opponentsMaxScore
+            bestPlayerMove = playerMove
+        gameState.undoMove()
+    return bestPlayerMove
 
 
 # Рекурсивный минимакс с настраиваемой глубиной, но больше 2 лучше не ставить
 def minMaxMoveAI(gameState, validMoves):
     global nextMove
     nextMove = None
+    random.shuffle(validMoves)
     minMaxAI(gameState, validMoves, gameState.whiteTurn)
     return nextMove
 
@@ -78,7 +78,6 @@ def minMaxAI(gameState, validMoves, whiteTurn, depth=DEPTH):
     global nextMove
     if depth == 0:
         return scoreBoard(gameState)
-    random.shuffle(validMoves)
     if whiteTurn:
         maxScore = -CHECKMATE
         for move in validMoves:
@@ -103,6 +102,61 @@ def minMaxAI(gameState, validMoves, whiteTurn, depth=DEPTH):
                     nextMove = move
             gameState.undoMove()
         return minScore
+
+
+# Алгоритм negamax с настраиваемой глубиной (то же, что и минимакс)
+def negaMaxMoveAI(gameState, validMoves):
+    global nextMove
+    nextMove = None
+    random.shuffle(validMoves)
+    negaMaxAI(gameState, validMoves, 1 if gameState.whiteTurn else -1)
+    return nextMove
+
+
+def negaMaxAI(gameState, validMoves, turn, depth=DEPTH):
+    global nextMove
+    if depth == 0:
+        return turn * scoreBoard(gameState)
+    maxScore = -CHECKMATE
+    for move in validMoves:
+        gameState.makeMove(move)
+        nextMoves = gameState.getValidMoves()
+        score = -negaMaxAI(gameState, nextMoves, -turn, depth - 1)
+        if score > maxScore:
+            maxScore = score
+            if depth == DEPTH:
+                nextMove = move
+        gameState.undoMove()
+    return maxScore
+
+
+def negaMaxWithPruningMoveAI(gameState, validMoves):
+    global nextMove
+    nextMove = None
+    random.shuffle(validMoves)
+    negaMaxWithPruningAI(gameState, validMoves, -CHECKMATE, CHECKMATE, 1 if gameState.whiteTurn else -1)
+    return nextMove
+
+
+def negaMaxWithPruningAI(gameState, validMoves, alpha, beta, turn, depth=DEPTH):
+    global nextMove
+    if depth == 0:
+        return turn * scoreBoard(gameState)
+    maxScore = -CHECKMATE
+    for move in validMoves:
+        gameState.makeMove(move)
+        nextMoves = gameState.getValidMoves()
+        score = -negaMaxWithPruningAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1)
+        if score > maxScore:
+            maxScore = score
+            if depth == DEPTH:
+                nextMove = move
+        gameState.undoMove()
+        if maxScore > alpha:
+            alpha = maxScore
+        if alpha >= beta:
+            break
+    return maxScore
 
 
 def scoreBoard(gameState):

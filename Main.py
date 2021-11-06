@@ -84,7 +84,7 @@ def main():
                         gameOver = False
                     moveMade = False
         if not gameOver and not playerTurn:
-            AIMove = AI.minMaxMoveAI(gameState, validMoves)
+            AIMove = AI.negaMaxMoveAI(gameState, validMoves)
             if AIMove is None:
                 AIMove = AI.randomMoveAI(validMoves)
             gameState.makeMove(AIMove)
