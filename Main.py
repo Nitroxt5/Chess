@@ -1,6 +1,7 @@
 import Engine
 import pygame
 import AI
+from multiprocessing import Process, Queue
 
 WIDTH = HEIGHT = 512
 DIMENSION = 8
@@ -26,6 +27,8 @@ def main():
     whitePlayer = True
     blackPlayer = False
     playerColor = False if blackPlayer and not whitePlayer else True
+    AIThinking = False
+    AIProcess = None
 
     loadImages()
     pygame.display.set_caption("SwiChess")
@@ -42,20 +45,20 @@ def main():
                 # working = False
                 quit()
             elif e.type == pygame.MOUSEBUTTONDOWN:
-                if not gameOver and playerTurn:
+                if not gameOver:
                     location = pygame.mouse.get_pos()
                     column = location[0] // SQ_SIZE
                     row = location[1] // SQ_SIZE
                     if not playerColor:
                         column = DIMENSION - column - 1
                         row = DIMENSION - row - 1
-                    if selectedSq == (column, row):
+                    if selectedSq == (column, row) or column < 0 or column > 7 or row < 0 or column > 7:
                         selectedSq = ()
                         clicks = []
                     else:
                         selectedSq = (column, row)
                         clicks.append(selectedSq)
-                    if len(clicks) == 2:
+                    if len(clicks) == 2 and playerTurn:
                         move = Engine.Move(clicks[0], clicks[1], gameState.board)
                         # print(move.getMoveNotation())
                         for i in range(len(validMoves)):
@@ -74,6 +77,9 @@ def main():
                     if gameOver:
                         playerTurn = not playerTurn
                         gameOver = False
+                    if AIThinking:
+                        AIProcess.terminate()
+                        AIThinking = False
                 if e.key == pygame.K_r:
                     gameState = Engine.GameState()
                     validMoves = gameState.getValidMoves()
@@ -83,12 +89,24 @@ def main():
                         playerTurn = not playerTurn
                         gameOver = False
                     moveMade = False
+                    if AIThinking:
+                        AIProcess.terminate()
+                        AIThinking = False
         if not gameOver and not playerTurn:
-            AIMove = AI.negaMaxMoveAI(gameState, validMoves)
-            if AIMove is None:
-                AIMove = AI.randomMoveAI(validMoves)
-            gameState.makeMove(AIMove)
-            moveMade = True
+            if not AIThinking:
+                print("thinking...")
+                AIThinking = True
+                returnQ = Queue()
+                AIProcess = Process(target=AI.negaMaxWithPruningMoveAI, args=(gameState, validMoves, returnQ))
+                AIProcess.start()
+            if not AIProcess.is_alive():
+                AIMove = returnQ.get()
+                print("came up with a move")
+                if AIMove is None:
+                    AIMove = AI.randomMoveAI(validMoves)
+                gameState.makeMove(AIMove)
+                moveMade = True
+                AIThinking = False
         if moveMade:
             validMoves = gameState.getValidMoves()
             moveMade = False
@@ -96,12 +114,12 @@ def main():
         if gameState.checkmate:
             gameOver = True
             if gameState.whiteTurn:
-                drawText(screen, "Black win by checkmate")
+                drawEndGameText(screen, "Black win by checkmate")
             else:
-                drawText(screen, "White win by checkmate")
+                drawEndGameText(screen, "White win by checkmate")
         elif gameState.stalemate:
             gameOver = True
-            drawText(screen, "Stalemate")
+            drawEndGameText(screen, "Stalemate")
         pygame.display.flip()
 
 
@@ -172,7 +190,7 @@ def drawPieces(screen, board, playerColor):
                     screen.blit(IMAGES[piece], pygame.Rect(column * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 
-def drawText(screen, text):
+def drawEndGameText(screen, text):
     font = pygame.font.SysFont("Helvetica", 32, True, False)
     textObj = font.render(text, False, pygame.Color("gray"))
     textLocation = pygame.Rect(0, 0, WIDTH, HEIGHT).move(WIDTH / 2 - textObj.get_width() / 2,

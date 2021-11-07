@@ -19,6 +19,7 @@ class GameState:
         self.checkmate = False
         self.stalemate = False
         self.enpassantSq = ()
+        self.enpassantSqLog = [self.enpassantSq]
         self.currentCastlingRight = CastleRights(True, True, True, True)
         self.castleRightsLog = [CastleRights(self.currentCastlingRight.wKs, self.currentCastlingRight.wQs,
                                              self.currentCastlingRight.bKs, self.currentCastlingRight.bQs)]
@@ -40,6 +41,7 @@ class GameState:
             self.enpassantSq = (move.startColumn, (move.startRow + move.endRow) // 2)
         else:
             self.enpassantSq = ()
+        self.enpassantSqLog.append(self.enpassantSq)
         if move.isCastle:
             if move.endColumn - move.startColumn == 2:
                 self.board[move.endRow][move.endColumn - 1] = self.board[move.endRow][move.endColumn + 1]
@@ -64,9 +66,8 @@ class GameState:
             if move.isEnpassant:
                 self.board[move.endRow][move.endColumn] = "--"
                 self.board[move.startRow][move.endColumn] = move.capturedPiece
-                self.enpassantSq = (move.endColumn, move.endRow)
-            if move.movedPiece[1] == "p" and abs(move.startRow - move.endRow) == 2:
-                self.enpassantSq = ()
+            self.enpassantSqLog.pop()
+            self.enpassantSq = self.enpassantSqLog[-1]
             self.castleRightsLog.pop()
             newRights = self.castleRightsLog[-1]
             self.currentCastlingRight = CastleRights(newRights.wKs, newRights.wQs, newRights.bKs, newRights.bQs)
@@ -423,7 +424,7 @@ class Move:
         self.capturedPiece = board[self.endRow][self.endColumn]
         self.moveID = self.startColumn * 1000 + self.startRow * 100 + self.endColumn * 10 + self.endRow
         self.isPawnPromotion = (self.movedPiece == "wp" and self.endRow == 0) or (
-                    self.movedPiece == "bp" and self.endRow == 7)
+                self.movedPiece == "bp" and self.endRow == 7)
         self.isEnpassant = isEnpassant
         if self.isEnpassant:
             self.capturedPiece = "bp" if self.movedPiece == "wp" else "wp"
@@ -437,9 +438,20 @@ class Move:
     def __repr__(self):
         return self.getMoveNotation()
 
+    def __str__(self):
+        return self.getMoveNotation()
+
     def getSquareNotation(self, row, column):
         return self.columnToLetter[column] + self.rowToNumber[row]
 
     def getMoveNotation(self):
-        return self.getSquareNotation(self.startRow, self.startColumn) + " - " + self.getSquareNotation(self.endRow,
-                                                                                                        self.endColumn)
+        moveNotation = ""
+        if self.movedPiece[1] != "p":
+            moveNotation = self.movedPiece[1]
+        moveNotation += self.getSquareNotation(self.startRow, self.startColumn)
+        if self.capturedPiece != "--":
+            moveNotation += "x"
+        else:
+            moveNotation += "-"
+        moveNotation += self.getSquareNotation(self.endRow, self.endColumn)
+        return moveNotation

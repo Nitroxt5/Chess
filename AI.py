@@ -1,10 +1,63 @@
 import random
 
-pieceScores = {"K": 0, "Q": 9, "R": 5, "B": 3, "N": 3, "p": 1}
-CHECKMATE = 1000
+pieceScores = {"K": 0, "Q": 90, "R": 50, "B": 30, "N": 30, "p": 10}
+CHECKMATE = 10000
 STALEMATE = 0
-DEPTH = 2
+DEPTH = 4
 nextMove = None
+counter = 0
+
+knightPositionScore = [[1, 1, 1, 1, 1, 1, 1, 1],
+                       [1, 2, 2, 2, 2, 2, 2, 1],
+                       [1, 2, 3, 3, 3, 3, 2, 1],
+                       [1, 2, 3, 4, 4, 3, 2, 1],
+                       [1, 2, 3, 4, 4, 3, 2, 1],
+                       [1, 2, 3, 3, 3, 3, 2, 1],
+                       [1, 2, 2, 2, 2, 2, 2, 1],
+                       [1, 1, 1, 1, 1, 1, 1, 1]]
+bishopPositionScore = [[2, 2, 2, 1, 1, 2, 2, 2],
+                       [2, 4, 3, 3, 3, 3, 4, 2],
+                       [2, 3, 3, 3, 3, 3, 3, 2],
+                       [2, 3, 3, 3, 3, 3, 3, 2],
+                       [2, 3, 3, 3, 3, 3, 3, 2],
+                       [2, 3, 3, 3, 3, 3, 3, 2],
+                       [2, 4, 3, 3, 3, 3, 4, 2],
+                       [2, 2, 2, 1, 1, 2, 2, 2]]
+queenPositionScore = [[1, 2, 1, 3, 1, 1, 1, 1],
+                      [1, 2, 4, 3, 3, 1, 1, 1],
+                      [1, 4, 2, 2, 2, 2, 3, 1],
+                      [3, 2, 2, 3, 3, 2, 2, 3],
+                      [3, 2, 2, 3, 3, 2, 2, 3],
+                      [1, 4, 2, 2, 2, 2, 3, 1],
+                      [1, 2, 4, 3, 3, 1, 1, 1],
+                      [1, 2, 1, 3, 1, 1, 1, 1]]
+rookPositionScore = [[4, 3, 4, 4, 4, 4, 3, 4],
+                     [4, 4, 4, 4, 4, 4, 4, 4],
+                     [2, 2, 2, 2, 2, 2, 2, 2],
+                     [1, 2, 2, 2, 2, 2, 2, 1],
+                     [1, 2, 2, 2, 2, 2, 2, 1],
+                     [2, 2, 2, 2, 2, 2, 2, 2],
+                     [4, 4, 4, 4, 4, 4, 4, 4],
+                     [4, 3, 4, 4, 4, 4, 3, 4]]
+whitePawnPositionScore = [[4, 4, 4, 4, 4, 4, 4, 4],
+                          [4, 4, 4, 4, 4, 4, 4, 4],
+                          [4, 4, 4, 4, 4, 4, 4, 4],
+                          [3, 3, 4, 4, 4, 4, 3, 3],
+                          [2, 2, 3, 3, 3, 3, 2, 2],
+                          [2, 2, 2, 2, 2, 2, 2, 2],
+                          [1, 1, 1, 1, 1, 1, 1, 1],
+                          [0, 0, 0, 0, 0, 0, 0, 0]]
+blackPawnPositionScore = [[0, 0, 0, 0, 0, 0, 0, 0],
+                          [1, 1, 1, 1, 1, 1, 1, 1],
+                          [2, 2, 2, 2, 2, 2, 2, 2],
+                          [2, 2, 3, 3, 3, 3, 2, 2],
+                          [3, 3, 4, 4, 4, 4, 3, 3],
+                          [4, 4, 4, 4, 4, 4, 4, 4],
+                          [4, 4, 4, 4, 4, 4, 4, 4],
+                          [4, 4, 4, 4, 4, 4, 4, 4]]
+
+piecePositionScores = {"Q": queenPositionScore, "R": rookPositionScore, "B": bishopPositionScore,
+                       "N": knightPositionScore, "bp": blackPawnPositionScore, "wp": whitePawnPositionScore}
 
 
 def randomMoveAI(validMoves):
@@ -130,16 +183,19 @@ def negaMaxAI(gameState, validMoves, turn, depth=DEPTH):
     return maxScore
 
 
-def negaMaxWithPruningMoveAI(gameState, validMoves):
-    global nextMove
+def negaMaxWithPruningMoveAI(gameState, validMoves, returnQ):
+    global nextMove, counter
     nextMove = None
     random.shuffle(validMoves)
+    counter = 0
     negaMaxWithPruningAI(gameState, validMoves, -CHECKMATE, CHECKMATE, 1 if gameState.whiteTurn else -1)
-    return nextMove
+    print(counter)
+    returnQ.put(nextMove)
 
 
 def negaMaxWithPruningAI(gameState, validMoves, alpha, beta, turn, depth=DEPTH):
-    global nextMove
+    global nextMove, counter
+    counter += 1
     if depth == 0:
         return turn * scoreBoard(gameState)
     maxScore = -CHECKMATE
@@ -151,6 +207,7 @@ def negaMaxWithPruningAI(gameState, validMoves, alpha, beta, turn, depth=DEPTH):
             maxScore = score
             if depth == DEPTH:
                 nextMove = move
+                print(move, score)
         gameState.undoMove()
         if maxScore > alpha:
             alpha = maxScore
@@ -168,10 +225,18 @@ def scoreBoard(gameState):
     elif gameState.stalemate:
         return STALEMATE
     score = 0
-    for row in gameState.board:
-        for square in row:
-            if square[0] == "w":
-                score += pieceScores[square[1]]
-            elif square[0] == "b":
-                score -= pieceScores[square[1]]
+    for row in range(len(gameState.board)):
+        for column in range(len(gameState.board[row])):
+            square = gameState.board[row][column]
+            if square != "--":
+                piecePositionScore = 0
+                if square[1] != "K":
+                    if square[1] == "p":
+                        piecePositionScore = piecePositionScores[square][row][column]
+                    else:
+                        piecePositionScore = piecePositionScores[square[1]][row][column]
+                if square[0] == "w":
+                    score += pieceScores[square[1]] + piecePositionScore
+                elif square[0] == "b":
+                    score -= pieceScores[square[1]] + piecePositionScore
     return score
