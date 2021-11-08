@@ -29,21 +29,20 @@ def main():
     playerColor = False if blackPlayer and not whitePlayer else True
     AIThinking = False
     AIProcess = None
+    returnQ = Queue()
 
     loadImages()
     pygame.display.set_caption("SwiChess")
     pygame.display.set_icon(IMAGES["icon"])
     selectedSq = ()
     clicks = []
+    working = True
 
-    # working = True
-    while True:
-        # pygame.time.wait(500)
+    while working:
         playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
-                # working = False
-                quit()
+                working = False
             elif e.type == pygame.MOUSEBUTTONDOWN:
                 if not gameOver:
                     location = pygame.mouse.get_pos()
@@ -60,10 +59,10 @@ def main():
                         clicks.append(selectedSq)
                     if len(clicks) == 2 and playerTurn:
                         move = Engine.Move(clicks[0], clicks[1], gameState.board)
-                        # print(move.getMoveNotation())
                         for i in range(len(validMoves)):
                             if move == validMoves[i]:
                                 gameState.makeMove(validMoves[i])
+                                gameState.inCheck()
                                 moveMade = True
                                 selectedSq = ()
                                 clicks = []
@@ -73,12 +72,14 @@ def main():
             elif e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_u:
                     gameState.undoMove()
+                    gameState.inCheck()
                     moveMade = True
                     if gameOver:
-                        playerTurn = not playerTurn
                         gameOver = False
+                        playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
                     if AIThinking:
                         AIProcess.terminate()
+                        playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
                         AIThinking = False
                 if e.key == pygame.K_r:
                     gameState = Engine.GameState()
@@ -86,17 +87,17 @@ def main():
                     selectedSq = ()
                     clicks = []
                     if gameOver:
-                        playerTurn = not playerTurn
                         gameOver = False
+                        playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
                     moveMade = False
                     if AIThinking:
                         AIProcess.terminate()
+                        playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
                         AIThinking = False
         if not gameOver and not playerTurn:
             if not AIThinking:
                 print("thinking...")
                 AIThinking = True
-                returnQ = Queue()
                 AIProcess = Process(target=AI.negaMaxWithPruningMoveAI, args=(gameState, validMoves, returnQ))
                 AIProcess.start()
             if not AIProcess.is_alive():
@@ -105,6 +106,7 @@ def main():
                 if AIMove is None:
                     AIMove = AI.randomMoveAI(validMoves)
                 gameState.makeMove(AIMove)
+                gameState.inCheck()
                 moveMade = True
                 AIThinking = False
         if moveMade:
