@@ -36,13 +36,15 @@ def main():
     pygame.display.set_icon(IMAGES["icon"])
     selectedSq = ()
     clicks = []
-    working = True
 
-    while working:
+    while True:
         playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
-                working = False
+                if AIThinking:
+                    AIProcess.terminate()
+                    AIThinking = False
+                quit()
             elif e.type == pygame.MOUSEBUTTONDOWN:
                 if not gameOver:
                     location = pygame.mouse.get_pos()
@@ -51,12 +53,13 @@ def main():
                     if not playerColor:
                         column = DIMENSION - column - 1
                         row = DIMENSION - row - 1
-                    if selectedSq == (column, row) or column < 0 or column > 7 or row < 0 or column > 7:
+                    if selectedSq == (column, row) or (len(clicks) == 1 and not playerTurn):
                         selectedSq = ()
                         clicks = []
                     else:
                         selectedSq = (column, row)
                         clicks.append(selectedSq)
+                    print(selectedSq, clicks)
                     if len(clicks) == 2 and playerTurn:
                         move = Engine.Move(clicks[0], clicks[1], gameState.board)
                         for i in range(len(validMoves)):

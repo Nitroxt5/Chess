@@ -78,47 +78,47 @@ def negaMaxWithPruningMoveAI(gameState, validMoves, returnQ):
     returnQ.put(nextMove)
 
 
-def negaMaxWithPruningAI(gameState, validMoves, alpha, beta, turn, depth=DEPTH):
-    global nextMove, counter
-    counter += 1
-    if depth == 0:
-        return turn * scoreBoard(gameState)
-    maxScore = -CHECKMATE
-    for move in validMoves:
-        gameState.makeMove(move)
-        nextMoves = gameState.getValidMoves()
-        score = -negaMaxWithPruningAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1)
-        if score > maxScore:
-            maxScore = score
-            if depth == DEPTH:
-                nextMove = move
-                print(move, score)
-        gameState.undoMove()
-        if maxScore > alpha:
-            alpha = maxScore
-        if alpha >= beta:
-            break
-    return maxScore
-
-
 # def negaMaxWithPruningAI(gameState, validMoves, alpha, beta, turn, depth=DEPTH):
 #     global nextMove, counter
 #     counter += 1
 #     if depth == 0:
 #         return turn * scoreBoard(gameState)
+#     maxScore = -CHECKMATE
 #     for move in validMoves:
 #         gameState.makeMove(move)
 #         nextMoves = gameState.getValidMoves()
 #         score = -negaMaxWithPruningAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1)
-#         gameState.undoMove()
-#         if score >= beta:
-#             return beta
-#         if score > alpha:
-#             alpha = score
+#         if score > maxScore:
+#             maxScore = score
 #             if depth == DEPTH:
 #                 nextMove = move
 #                 print(move, score)
-#     return alpha
+#         gameState.undoMove()
+#         if maxScore > alpha:
+#             alpha = maxScore
+#         if alpha >= beta:
+#             break
+#     return maxScore
+
+
+def negaMaxWithPruningAI(gameState, validMoves, alpha, beta, turn, depth=DEPTH):
+    global nextMove, counter
+    counter += 1
+    if depth == 0:
+        return turn * scoreBoard(gameState)
+    for move in validMoves:
+        gameState.makeMove(move)
+        nextMoves = gameState.getValidMoves()
+        score = -negaMaxWithPruningAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1)
+        gameState.undoMove()
+        if score >= beta:
+            return beta
+        if score > alpha:
+            alpha = score
+            if depth == DEPTH:
+                nextMove = move
+                print(move, score)
+    return alpha
 
 
 def scoreProtectionsAndThreats(gameState):

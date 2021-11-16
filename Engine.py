@@ -10,6 +10,16 @@ class GameState:
             ["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"],
             ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
         ]
+        # self.board = [
+        #     ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
+        #     ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],
+        #     ["--", "--", "--", "bN", "--", "bN", "--", "bB"],
+        #     ["--", "--", "--", "--", "--", "--", "--", "--"],
+        #     ["--", "--", "--", "--", "wp", "--", "--", "--"],
+        #     ["wp", "wp", "--", "wB", "--", "wB", "--", "--"],
+        #     ["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"],
+        #     ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
+        # ]
         self.moveFunc = {"p": self.getPawnMoves, "R": self.getRookMoves, "N": self.getKnightMoves,
                          "B": self.getBishopMoves, "Q": self.getQueenMoves, "K": self.getKingMoves}
         self.whiteTurn = True
@@ -437,6 +447,10 @@ class Move:
         self.endRow = endSq[1]
         self.movedPiece = board[self.startRow][self.startColumn]
         self.capturedPiece = board[self.endRow][self.endColumn]
+        self.isCapture = False
+        if self.capturedPiece != "--":
+            if self.capturedPiece[0] != self.movedPiece[0]:
+                self.isCapture = True
         self.moveID = self.startColumn * 1000 + self.startRow * 100 + self.endColumn * 10 + self.endRow
         self.isPawnPromotion = (self.movedPiece == "wp" and self.endRow == 0) or (
                 self.movedPiece == "bp" and self.endRow == 7)
