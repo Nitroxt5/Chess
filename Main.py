@@ -44,6 +44,7 @@ def main():
                 if AIThinking:
                     AIProcess.terminate()
                     AIThinking = False
+                print(gameState.gameLog)
                 quit()
             elif e.type == pygame.MOUSEBUTTONDOWN:
                 if not gameOver:
@@ -53,13 +54,12 @@ def main():
                     if not playerColor:
                         column = DIMENSION - column - 1
                         row = DIMENSION - row - 1
-                    if selectedSq == (column, row) or (len(clicks) == 1 and not playerTurn):
+                    if selectedSq == (column, row):
                         selectedSq = ()
                         clicks = []
                     else:
                         selectedSq = (column, row)
                         clicks.append(selectedSq)
-                    print(selectedSq, clicks)
                     if len(clicks) == 2 and playerTurn:
                         move = Engine.Move(clicks[0], clicks[1], gameState.board)
                         for i in range(len(validMoves)):
@@ -112,6 +112,8 @@ def main():
                 gameState.inCheck()
                 moveMade = True
                 AIThinking = False
+                selectedSq = ()
+                clicks = []
         if moveMade:
             validMoves = gameState.getValidMoves()
             moveMade = False

@@ -1,4 +1,5 @@
 import random
+import time
 
 pieceScores = {"K": 0, "Q": 900, "R": 500, "B": 300, "N": 300, "p": 100}
 CHECKMATE = 100000
@@ -47,10 +48,10 @@ whitePawnPositionScore = [[4, 4, 4, 4, 4, 4, 4, 4],
                           [3, 3, 4, 4, 4, 4, 3, 3],
                           [2, 2, 3, 3, 3, 3, 2, 2],
                           [2, 2, 3, 3, 3, 3, 2, 2],
-                          [1, 1, 1, 1, 1, 1, 1, 1],
+                          [1, 1, 1, 1, 0, 1, 1, 1],
                           [0, 0, 0, 0, 0, 0, 0, 0]]
 blackPawnPositionScore = [[0, 0, 0, 0, 0, 0, 0, 0],
-                          [1, 1, 1, 1, 1, 1, 1, 1],
+                          [1, 1, 1, 1, 0, 1, 1, 1],
                           [2, 2, 3, 3, 3, 3, 2, 2],
                           [2, 2, 3, 3, 3, 3, 2, 2],
                           [3, 3, 4, 4, 4, 4, 3, 3],
@@ -73,8 +74,10 @@ def negaMaxWithPruningMoveAI(gameState, validMoves, returnQ):
     validMoves.sort(key=lambda move: move.capturedPiece, reverse=True)
     print(validMoves)
     counter = 0
+    start = time.time()
     negaMaxWithPruningAI(gameState, validMoves, -CHECKMATE, CHECKMATE, 1 if gameState.whiteTurn else -1)
-    print(counter)
+    print("Thinking time:", time.time() - start, "s")
+    print("Positions calculated:", counter)
     returnQ.put(nextMove)
 
 
