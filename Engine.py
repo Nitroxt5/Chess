@@ -136,17 +136,17 @@ class GameState:
                 elif move.endColumn == 7:
                     self.currentCastlingRight.bKs = False
 
-    def getPossibleMoves(self):
+    def getPossibleMoves(self, allMoves=False):
         moves = []
         for row in range(len(self.board)):
             for column in range(len(self.board[row])):
                 turn = self.board[row][column][0]
                 if (turn == "w" and self.whiteTurn) or (turn == "b" and not self.whiteTurn):
                     piece = self.board[row][column][1]
-                    self.moveFunc[piece](row, column, moves)
+                    self.moveFunc[piece](row, column, moves, allMoves)
         return moves
 
-    def getPawnMoves(self, row, column, moves):
+    def getPawnMoves(self, row, column, moves, allMoves=False):
         if self.whiteTurn:
             if self.board[row - 1][column] == "--":
                 moves.append(Move((column, row), (column, row - 1), self.board))
@@ -155,10 +155,14 @@ class GameState:
             if column - 1 >= 0:
                 if self.board[row - 1][column - 1][0] == "b":
                     moves.append(Move((column, row), (column - 1, row - 1), self.board))
+                elif self.board[row - 1][column - 1][0] == "w" and allMoves:
+                    moves.append(Move((column, row), (column - 1, row - 1), self.board))
                 elif (column - 1, row - 1) == self.enpassantSq:
                     moves.append(Move((column, row), (column - 1, row - 1), self.board, isEnpassant=True))
             if column + 1 <= 7:
                 if self.board[row - 1][column + 1][0] == "b":
+                    moves.append(Move((column, row), (column + 1, row - 1), self.board))
+                elif self.board[row - 1][column + 1][0] == "w" and allMoves:
                     moves.append(Move((column, row), (column + 1, row - 1), self.board))
                 elif (column + 1, row - 1) == self.enpassantSq:
                     moves.append(Move((column, row), (column + 1, row - 1), self.board, isEnpassant=True))
@@ -170,15 +174,20 @@ class GameState:
             if column - 1 >= 0:
                 if self.board[row + 1][column - 1][0] == "w":
                     moves.append(Move((column, row), (column - 1, row + 1), self.board))
+                elif self.board[row + 1][column - 1][0] == "b" and allMoves:
+                    moves.append(Move((column, row), (column - 1, row + 1), self.board))
                 elif (column - 1, row + 1) == self.enpassantSq:
                     moves.append(Move((column, row), (column - 1, row + 1), self.board, isEnpassant=True))
             if column + 1 <= 7:
                 if self.board[row + 1][column + 1][0] == "w":
                     moves.append(Move((column, row), (column + 1, row + 1), self.board))
+                elif self.board[row + 1][column + 1][0] == "b" and allMoves:
+                    moves.append(Move((column, row), (column + 1, row + 1), self.board))
                 elif (column + 1, row + 1) == self.enpassantSq:
                     moves.append(Move((column, row), (column + 1, row + 1), self.board, isEnpassant=True))
 
-    def getRookMoves(self, row, column, moves):
+    def getRookMoves(self, row, column, moves, allMoves=False):
+        allyColor = "w" if self.whiteTurn else "b"
         enemyColor = "b" if self.whiteTurn else "w"
         checkingRow = row
         while checkingRow > 0:
@@ -186,6 +195,9 @@ class GameState:
             if self.board[checkingRow][column] == "--":
                 moves.append(Move((column, row), (column, checkingRow), self.board))
             elif self.board[checkingRow][column][0] == enemyColor:
+                moves.append(Move((column, row), (column, checkingRow), self.board))
+                break
+            elif self.board[checkingRow][column][0] == allyColor and allMoves:
                 moves.append(Move((column, row), (column, checkingRow), self.board))
                 break
             else:
@@ -198,6 +210,9 @@ class GameState:
             elif self.board[checkingRow][column][0] == enemyColor:
                 moves.append(Move((column, row), (column, checkingRow), self.board))
                 break
+            elif self.board[checkingRow][column][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (column, checkingRow), self.board))
+                break
             else:
                 break
         checkingColumn = column
@@ -206,6 +221,9 @@ class GameState:
             if self.board[row][checkingColumn] == "--":
                 moves.append(Move((column, row), (checkingColumn, row), self.board))
             elif self.board[row][checkingColumn][0] == enemyColor:
+                moves.append(Move((column, row), (checkingColumn, row), self.board))
+                break
+            elif self.board[row][checkingColumn][0] == allyColor and allMoves:
                 moves.append(Move((column, row), (checkingColumn, row), self.board))
                 break
             else:
@@ -218,53 +236,74 @@ class GameState:
             elif self.board[row][checkingColumn][0] == enemyColor:
                 moves.append(Move((column, row), (checkingColumn, row), self.board))
                 break
+            elif self.board[row][checkingColumn][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (checkingColumn, row), self.board))
+                break
             else:
                 break
 
-    def getKnightMoves(self, row, column, moves):
+    def getKnightMoves(self, row, column, moves, allMoves=False):
+        allyColor = "w" if self.whiteTurn else "b"
         enemyColor = "b" if self.whiteTurn else "w"
         if row - 2 >= 0 and column + 1 <= 7:
             if self.board[row - 2][column + 1] == "--":
                 moves.append(Move((column, row), (column + 1, row - 2), self.board))
             elif self.board[row - 2][column + 1][0] == enemyColor:
                 moves.append(Move((column, row), (column + 1, row - 2), self.board))
+            elif self.board[row - 2][column + 1][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (column + 1, row - 2), self.board))
         if row - 2 >= 0 and column - 1 >= 0:
             if self.board[row - 2][column - 1] == "--":
                 moves.append(Move((column, row), (column - 1, row - 2), self.board))
             elif self.board[row - 2][column - 1][0] == enemyColor:
+                moves.append(Move((column, row), (column - 1, row - 2), self.board))
+            elif self.board[row - 2][column - 1][0] == allyColor and allMoves:
                 moves.append(Move((column, row), (column - 1, row - 2), self.board))
         if row - 1 >= 0 and column + 2 <= 7:
             if self.board[row - 1][column + 2] == "--":
                 moves.append(Move((column, row), (column + 2, row - 1), self.board))
             elif self.board[row - 1][column + 2][0] == enemyColor:
                 moves.append(Move((column, row), (column + 2, row - 1), self.board))
+            elif self.board[row - 1][column + 2][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (column + 2, row - 1), self.board))
         if row + 1 <= 7 and column + 2 <= 7:
             if self.board[row + 1][column + 2] == "--":
                 moves.append(Move((column, row), (column + 2, row + 1), self.board))
             elif self.board[row + 1][column + 2][0] == enemyColor:
+                moves.append(Move((column, row), (column + 2, row + 1), self.board))
+            elif self.board[row + 1][column + 2][0] == allyColor and allMoves:
                 moves.append(Move((column, row), (column + 2, row + 1), self.board))
         if row + 2 <= 7 and column + 1 <= 7:
             if self.board[row + 2][column + 1] == "--":
                 moves.append(Move((column, row), (column + 1, row + 2), self.board))
             elif self.board[row + 2][column + 1][0] == enemyColor:
                 moves.append(Move((column, row), (column + 1, row + 2), self.board))
+            elif self.board[row + 2][column + 1][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (column + 1, row + 2), self.board))
         if row + 2 <= 7 and column - 1 >= 0:
             if self.board[row + 2][column - 1] == "--":
                 moves.append(Move((column, row), (column - 1, row + 2), self.board))
             elif self.board[row + 2][column - 1][0] == enemyColor:
+                moves.append(Move((column, row), (column - 1, row + 2), self.board))
+            elif self.board[row + 2][column - 1][0] == allyColor and allMoves:
                 moves.append(Move((column, row), (column - 1, row + 2), self.board))
         if row + 1 <= 7 and column - 2 >= 0:
             if self.board[row + 1][column - 2] == "--":
                 moves.append(Move((column, row), (column - 2, row + 1), self.board))
             elif self.board[row + 1][column - 2][0] == enemyColor:
                 moves.append(Move((column, row), (column - 2, row + 1), self.board))
+            elif self.board[row + 1][column - 2][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (column - 2, row + 1), self.board))
         if row - 1 >= 0 and column - 2 >= 0:
             if self.board[row - 1][column - 2] == "--":
                 moves.append(Move((column, row), (column - 2, row - 1), self.board))
             elif self.board[row - 1][column - 2][0] == enemyColor:
                 moves.append(Move((column, row), (column - 2, row - 1), self.board))
+            elif self.board[row - 1][column - 2][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (column - 2, row - 1), self.board))
 
-    def getBishopMoves(self, row, column, moves):
+    def getBishopMoves(self, row, column, moves, allMoves=False):
+        allyColor = "w" if self.whiteTurn else "b"
         enemyColor = "b" if self.whiteTurn else "w"
         checkingRow = row
         checkingColumn = column
@@ -274,6 +313,9 @@ class GameState:
             if self.board[checkingRow][checkingColumn] == "--":
                 moves.append(Move((column, row), (checkingColumn, checkingRow), self.board))
             elif self.board[checkingRow][checkingColumn][0] == enemyColor:
+                moves.append(Move((column, row), (checkingColumn, checkingRow), self.board))
+                break
+            elif self.board[checkingRow][checkingColumn][0] == allyColor and allMoves:
                 moves.append(Move((column, row), (checkingColumn, checkingRow), self.board))
                 break
             else:
@@ -288,6 +330,9 @@ class GameState:
             elif self.board[checkingRow][checkingColumn][0] == enemyColor:
                 moves.append(Move((column, row), (checkingColumn, checkingRow), self.board))
                 break
+            elif self.board[checkingRow][checkingColumn][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (checkingColumn, checkingRow), self.board))
+                break
             else:
                 break
         checkingRow = row
@@ -298,6 +343,9 @@ class GameState:
             if self.board[checkingRow][checkingColumn] == "--":
                 moves.append(Move((column, row), (checkingColumn, checkingRow), self.board))
             elif self.board[checkingRow][checkingColumn][0] == enemyColor:
+                moves.append(Move((column, row), (checkingColumn, checkingRow), self.board))
+                break
+            elif self.board[checkingRow][checkingColumn][0] == allyColor and allMoves:
                 moves.append(Move((column, row), (checkingColumn, checkingRow), self.board))
                 break
             else:
@@ -312,54 +360,74 @@ class GameState:
             elif self.board[checkingRow][checkingColumn][0] == enemyColor:
                 moves.append(Move((column, row), (checkingColumn, checkingRow), self.board))
                 break
+            elif self.board[checkingRow][checkingColumn][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (checkingColumn, checkingRow), self.board))
+                break
             else:
                 break
 
-    def getQueenMoves(self, row, column, moves):
-        self.getRookMoves(row, column, moves)
-        self.getBishopMoves(row, column, moves)
+    def getQueenMoves(self, row, column, moves, allMoves=False):
+        self.getRookMoves(row, column, moves, allMoves)
+        self.getBishopMoves(row, column, moves, allMoves)
 
-    def getKingMoves(self, row, column, moves):
+    def getKingMoves(self, row, column, moves, allMoves=False):
+        allyColor = "w" if self.whiteTurn else "b"
         enemyColor = "b" if self.whiteTurn else "w"
         if row - 1 >= 0:
             if self.board[row - 1][column] == "--":
                 moves.append(Move((column, row), (column, row - 1), self.board))
             elif self.board[row - 1][column][0] == enemyColor:
                 moves.append(Move((column, row), (column, row - 1), self.board))
+            elif self.board[row - 1][column][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (column, row - 1), self.board))
         if row - 1 >= 0 and column + 1 <= 7:
             if self.board[row - 1][column + 1] == "--":
                 moves.append(Move((column, row), (column + 1, row - 1), self.board))
             elif self.board[row - 1][column + 1][0] == enemyColor:
+                moves.append(Move((column, row), (column + 1, row - 1), self.board))
+            elif self.board[row - 1][column + 1][0] == allyColor and allMoves:
                 moves.append(Move((column, row), (column + 1, row - 1), self.board))
         if column + 1 <= 7:
             if self.board[row][column + 1] == "--":
                 moves.append(Move((column, row), (column + 1, row), self.board))
             elif self.board[row][column + 1][0] == enemyColor:
                 moves.append(Move((column, row), (column + 1, row), self.board))
+            elif self.board[row][column + 1][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (column + 1, row), self.board))
         if row + 1 <= 7 and column + 1 <= 7:
             if self.board[row + 1][column + 1] == "--":
                 moves.append(Move((column, row), (column + 1, row + 1), self.board))
             elif self.board[row + 1][column + 1][0] == enemyColor:
+                moves.append(Move((column, row), (column + 1, row + 1), self.board))
+            elif self.board[row + 1][column + 1][0] == allyColor and allMoves:
                 moves.append(Move((column, row), (column + 1, row + 1), self.board))
         if row + 1 <= 7:
             if self.board[row + 1][column] == "--":
                 moves.append(Move((column, row), (column, row + 1), self.board))
             elif self.board[row + 1][column][0] == enemyColor:
                 moves.append(Move((column, row), (column, row + 1), self.board))
+            elif self.board[row + 1][column][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (column, row + 1), self.board))
         if row + 1 <= 7 and column - 1 >= 0:
             if self.board[row + 1][column - 1] == "--":
                 moves.append(Move((column, row), (column - 1, row + 1), self.board))
             elif self.board[row + 1][column - 1][0] == enemyColor:
+                moves.append(Move((column, row), (column - 1, row + 1), self.board))
+            elif self.board[row + 1][column - 1][0] == allyColor and allMoves:
                 moves.append(Move((column, row), (column - 1, row + 1), self.board))
         if column - 1 >= 0:
             if self.board[row][column - 1] == "--":
                 moves.append(Move((column, row), (column - 1, row), self.board))
             elif self.board[row][column - 1][0] == enemyColor:
                 moves.append(Move((column, row), (column - 1, row), self.board))
+            elif self.board[row][column - 1][0] == allyColor and allMoves:
+                moves.append(Move((column, row), (column - 1, row), self.board))
         if row - 1 >= 0 and column - 1 >= 0:
             if self.board[row - 1][column - 1] == "--":
                 moves.append(Move((column, row), (column - 1, row - 1), self.board))
             elif self.board[row - 1][column - 1][0] == enemyColor:
+                moves.append(Move((column, row), (column - 1, row - 1), self.board))
+            elif self.board[row - 1][column - 1][0] == allyColor and allMoves:
                 moves.append(Move((column, row), (column - 1, row - 1), self.board))
 
     def getCastleMoves(self, row, column, moves):
@@ -447,16 +515,16 @@ class Move:
         self.endRow = endSq[1]
         self.movedPiece = board[self.startRow][self.startColumn]
         self.capturedPiece = board[self.endRow][self.endColumn]
-        self.isCapture = False
-        if self.capturedPiece != "--":
-            if self.capturedPiece[0] != self.movedPiece[0]:
-                self.isCapture = True
         self.moveID = self.startColumn * 1000 + self.startRow * 100 + self.endColumn * 10 + self.endRow
         self.isPawnPromotion = (self.movedPiece == "wp" and self.endRow == 0) or (
                 self.movedPiece == "bp" and self.endRow == 7)
         self.isEnpassant = isEnpassant
         if self.isEnpassant:
             self.capturedPiece = "bp" if self.movedPiece == "wp" else "wp"
+        self.isCapture = False
+        if self.capturedPiece != "--":
+            if self.capturedPiece[0] != self.movedPiece[0]:
+                self.isCapture = True
         self.isCastle = isCastle
 
     def __eq__(self, other):

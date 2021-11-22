@@ -157,7 +157,7 @@ def highlightLastMove(screen, gameState, playerColor):
         lastMove = gameState.gameLog[-1]
         s = pygame.Surface((SQ_SIZE, SQ_SIZE))
         s.set_alpha(100)
-        s.fill(pygame.Color(182, 255, 0))
+        s.fill(pygame.Color(0, 0, 255))
         if playerColor:
             screen.blit(s, (lastMove.startColumn * SQ_SIZE, lastMove.startRow * SQ_SIZE))
             screen.blit(s, (lastMove.endColumn * SQ_SIZE, lastMove.endRow * SQ_SIZE))

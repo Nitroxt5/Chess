@@ -70,13 +70,14 @@ def randomMoveAI(validMoves):
 def negaMaxWithPruningMoveAI(gameState, validMoves, returnQ):
     global nextMove, counter
     nextMove = None
-    random.shuffle(validMoves)
-    validMoves.sort(key=lambda move: move.capturedPiece, reverse=True)
+    # random.shuffle(validMoves)
+    validMoves.sort(key=lambda move: move.isCapture, reverse=True)
+    validMoves.sort(key=lambda move: move.isCastle, reverse=True)
     print(validMoves)
     counter = 0
-    start = time.time()
+    start = time.perf_counter()
     negaMaxWithPruningAI(gameState, validMoves, -CHECKMATE, CHECKMATE, 1 if gameState.whiteTurn else -1)
-    print("Thinking time:", time.time() - start, "s")
+    print("Thinking time:", time.perf_counter() - start, "s")
     print("Positions calculated:", counter)
     returnQ.put(nextMove)
 
@@ -87,6 +88,9 @@ def negaMaxWithPruningMoveAI(gameState, validMoves, returnQ):
 #     if depth == 0:
 #         return turn * scoreBoard(gameState)
 #     maxScore = -CHECKMATE
+#     # random.shuffle(validMoves)
+#     validMoves.sort(key=lambda mov: mov.isCapture, reverse=True)
+#     validMoves.sort(key=lambda mov: mov.isCastle, reverse=True)
 #     for move in validMoves:
 #         gameState.makeMove(move)
 #         nextMoves = gameState.getValidMoves()
@@ -109,6 +113,9 @@ def negaMaxWithPruningAI(gameState, validMoves, alpha, beta, turn, depth=DEPTH):
     counter += 1
     if depth == 0:
         return turn * scoreBoard(gameState)
+    # random.shuffle(validMoves)
+    validMoves.sort(key=lambda mov: mov.isCapture, reverse=True)
+    validMoves.sort(key=lambda mov: mov.isCastle, reverse=True)
     for move in validMoves:
         gameState.makeMove(move)
         nextMoves = gameState.getValidMoves()
@@ -125,9 +132,9 @@ def negaMaxWithPruningAI(gameState, validMoves, alpha, beta, turn, depth=DEPTH):
 
 
 def scoreProtectionsAndThreats(gameState):
-    moves = gameState.getPossibleMoves()
+    moves = gameState.getPossibleMoves(True)
     gameState.whiteTurn = not gameState.whiteTurn
-    moves += gameState.getPossibleMoves()
+    moves += gameState.getPossibleMoves(True)
     gameState.whiteTurn = not gameState.whiteTurn
     threatsDifference = 0
     protectionsDifference = 0
