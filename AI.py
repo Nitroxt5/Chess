@@ -7,8 +7,8 @@ STALEMATE = 0
 DEPTH = 3
 nextMove = None
 counter = 0
-threatCost = 3
-protectionCost = 5
+threatCost = 2
+protectionCost = 2
 
 knightPositionScore = [[1, 1, 1, 1, 1, 1, 1, 1],
                        [1, 2, 2, 2, 2, 2, 2, 1],
@@ -71,9 +71,9 @@ def negaMaxWithPruningMoveAI(gameState, validMoves, returnQ):
     global nextMove, counter
     nextMove = None
     # random.shuffle(validMoves)
-    validMoves.sort(key=lambda move: move.isCapture, reverse=True)
-    validMoves.sort(key=lambda move: move.isCastle, reverse=True)
-    print(validMoves)
+    # validMoves.sort(key=lambda move: move.isCapture, reverse=True)
+    # validMoves.sort(key=lambda move: move.isCastle, reverse=True)
+    # print(validMoves)
     counter = 0
     start = time.perf_counter()
     negaMaxWithPruningAI(gameState, validMoves, -CHECKMATE, CHECKMATE, 1 if gameState.whiteTurn else -1)

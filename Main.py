@@ -65,7 +65,6 @@ def main():
                         for i in range(len(validMoves)):
                             if move == validMoves[i]:
                                 gameState.makeMove(validMoves[i])
-                                gameState.inCheck()
                                 moveMade = True
                                 selectedSq = ()
                                 clicks = []
@@ -75,7 +74,6 @@ def main():
             elif e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_u:
                     gameState.undoMove()
-                    gameState.inCheck()
                     moveMade = True
                     if gameOver:
                         gameOver = False
@@ -109,7 +107,6 @@ def main():
                 if AIMove is None:
                     AIMove = AI.randomMoveAI(validMoves)
                 gameState.makeMove(AIMove)
-                gameState.inCheck()
                 moveMade = True
                 AIThinking = False
                 selectedSq = ()

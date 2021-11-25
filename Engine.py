@@ -66,11 +66,11 @@ class GameState:
                 self.isWhiteCastled = True
             else:
                 self.isBlackCastled = True
-        self.inCheck()
         self.updateCastleRights(move)
         self.castleRightsLog.append(CastleRights(self.currentCastlingRight.wKs, self.currentCastlingRight.wQs,
                                                  self.currentCastlingRight.bKs, self.currentCastlingRight.bQs))
         self.whiteTurn = not self.whiteTurn
+        self.inCheck()
 
     def undoMove(self):
         if len(self.gameLog) != 0:
@@ -103,6 +103,7 @@ class GameState:
             self.checkmate = False
             self.stalemate = False
             self.whiteTurn = not self.whiteTurn
+            self.inCheck()
 
     def updateCastleRights(self, move):
         if move.movedPiece == "wK":
