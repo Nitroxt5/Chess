@@ -1,6 +1,7 @@
 import Engine
 import pygame
 import AI
+from math import ceil, floor
 from multiprocessing import Process, Queue
 
 WIDTH = HEIGHT = 512
@@ -36,6 +37,8 @@ def main():
     pygame.display.set_icon(IMAGES["icon"])
     selectedSq = ()
     clicks = []
+    AIThinkingTime = 0
+    AIPositionCounter = 0
 
     while True:
         playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
@@ -45,6 +48,14 @@ def main():
                     AIProcess.terminate()
                     AIThinking = False
                 print(gameState.gameLog)
+                moveCountCeil = ceil(len(gameState.gameLog) / 2)
+                moveCountFloor = floor(len(gameState.gameLog) / 2)
+                print(f"Moves: {moveCountCeil}")
+                print(f"Overall thinking time: {AIThinkingTime}")
+                print(f"Overall positions calculated: {AIPositionCounter}")
+                if moveCountFloor != 0:
+                    print(f"Average time per move: {AIThinkingTime / moveCountFloor}")
+                    print(f"Average calculated positions per move: {AIPositionCounter / moveCountFloor}")
                 quit()
             elif e.type == pygame.MOUSEBUTTONDOWN:
                 if not gameOver:
@@ -102,7 +113,9 @@ def main():
                 AIProcess = Process(target=AI.negaMaxWithPruningMoveAI, args=(gameState, validMoves, returnQ))
                 AIProcess.start()
             if not AIProcess.is_alive():
-                AIMove = returnQ.get()
+                AIMove, thinkingTime, positionCounter = returnQ.get()
+                AIThinkingTime += thinkingTime
+                AIPositionCounter += positionCounter
                 print("came up with a move")
                 if AIMove is None:
                     AIMove = AI.randomMoveAI(validMoves)

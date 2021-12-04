@@ -77,9 +77,10 @@ def negaMaxWithPruningMoveAI(gameState, validMoves, returnQ):
     counter = 0
     start = time.perf_counter()
     negaMaxWithPruningAI(gameState, validMoves, -CHECKMATE, CHECKMATE, 1 if gameState.whiteTurn else -1)
-    print("Thinking time:", time.perf_counter() - start, "s")
+    thinkingTime = time.perf_counter() - start
+    print("Thinking time:", thinkingTime, "s")
     print("Positions calculated:", counter)
-    returnQ.put(nextMove)
+    returnQ.put((nextMove, thinkingTime, counter))
 
 
 # def negaMaxWithPruningAI(gameState, validMoves, alpha, beta, turn, depth=DEPTH):
@@ -113,7 +114,7 @@ def negaMaxWithPruningAI(gameState, validMoves, alpha, beta, turn, depth=DEPTH):
     counter += 1
     if depth == 0:
         return turn * scoreBoard(gameState)
-    # random.shuffle(validMoves)
+    random.shuffle(validMoves)
     validMoves.sort(key=lambda mov: mov.isCapture, reverse=True)
     validMoves.sort(key=lambda mov: mov.isCastle, reverse=True)
     for move in validMoves:
