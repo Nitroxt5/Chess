@@ -25,7 +25,7 @@ def main():
     validMoves = gameState.getValidMoves()
     moveMade = False
     gameOver = False
-    whitePlayer = True
+    whitePlayer = False
     blackPlayer = False
     playerColor = False if blackPlayer and not whitePlayer else True
     AIThinking = False
@@ -48,8 +48,12 @@ def main():
                     AIProcess.terminate()
                     AIThinking = False
                 print(gameState.gameLog)
-                moveCountCeil = ceil(len(gameState.gameLog) / 2)
-                moveCountFloor = floor(len(gameState.gameLog) / 2)
+                if not whitePlayer and not blackPlayer:
+                    moveCountCeil = len(gameState.gameLog)
+                    moveCountFloor = len(gameState.gameLog)
+                else:
+                    moveCountCeil = ceil(len(gameState.gameLog) / 2)
+                    moveCountFloor = floor(len(gameState.gameLog) / 2)
                 print(f"Moves: {moveCountCeil}")
                 print(f"Overall thinking time: {AIThinkingTime}")
                 print(f"Overall positions calculated: {AIPositionCounter}")
@@ -120,6 +124,8 @@ def main():
                 if AIMove is None:
                     AIMove = AI.randomMoveAI(validMoves)
                 gameState.makeMove(AIMove)
+                if len(gameState.gameLog) == 83:
+                    gameOver = True
                 moveMade = True
                 AIThinking = False
                 selectedSq = ()

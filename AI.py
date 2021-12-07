@@ -112,8 +112,12 @@ def negaMaxWithPruningMoveAI(gameState, validMoves, returnQ):
 def negaMaxWithPruningAI(gameState, validMoves, alpha, beta, turn, depth=DEPTH):
     global nextMove, counter
     counter += 1
+    if gameState.checkmate:
+        return turn * CHECKMATE
+    elif gameState.stalemate:
+        return STALEMATE
     if depth == 0:
-        return turn * scoreBoard(gameState)
+        return turn * scoreBoard(gameState, validMoves)
     random.shuffle(validMoves)
     validMoves.sort(key=lambda mov: mov.isCapture, reverse=True)
     validMoves.sort(key=lambda mov: mov.isCastle, reverse=True)
@@ -152,7 +156,7 @@ def scoreProtectionsAndThreats(gameState):
     return threatsDifference, protectionsDifference
 
 
-def scoreBoard(gameState):
+def scoreBoard(gameState, validMoves):
     if gameState.checkmate:
         if gameState.whiteTurn:
             return -CHECKMATE
@@ -162,6 +166,10 @@ def scoreBoard(gameState):
         return STALEMATE
     threatsDifference, protectionsDifference = scoreProtectionsAndThreats(gameState)
     score = threatsDifference * threatCost + protectionsDifference * protectionCost
+    if gameState.whiteTurn:
+        score += len(validMoves)
+    else:
+        score -= len(validMoves)
     if gameState.isWhiteCastled:
         score += 50
     if gameState.isBlackCastled:
