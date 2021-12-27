@@ -1,40 +1,39 @@
 import Engine
-import pygame
+import pygame as pg
 import AI
 from math import ceil, floor
 from multiprocessing import Process, Queue
 
-WIDTH = HEIGHT = 512
-DIMENSION = 8
-SQ_SIZE = HEIGHT // DIMENSION
+BOARD_WIDTH = BOARD_HEIGHT = 512
+SQ_SIZE = BOARD_HEIGHT // Engine.DIMENSION
 IMAGES = {}
-COLORS = [pygame.Color("white"), pygame.Color("dark gray")]
+BOARD_COLORS = (pg.Color("white"), pg.Color("dark gray"))
 
 
 def loadImages():
-    pieces = ["icon", "wp", "wR", "wN", "wB", "wQ", "wK", "bp", "bR", "bN", "bB", "bQ", "bK"]
-    for piece in pieces:
-        IMAGES[piece] = pygame.transform.scale(pygame.image.load("Chess/images/" + piece + ".png"), (SQ_SIZE, SQ_SIZE))
+    for piece in Engine.COLORED_PIECES:
+        IMAGES[piece] = pg.transform.scale(pg.image.load(f"images/{piece}.png"), (SQ_SIZE, SQ_SIZE))
+    IMAGES["icon"] = pg.transform.scale(pg.image.load(f"images/icon.png"), (SQ_SIZE, SQ_SIZE))
 
 
 def main():
-    pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    screen.fill(pygame.Color("white"))
+    pg.init()
+    screen = pg.display.set_mode((BOARD_WIDTH, BOARD_HEIGHT))
+    screen.fill(pg.Color("white"))
+    whitePlayer = False
+    blackPlayer = False
+    playerColor = False if blackPlayer and not whitePlayer else True
     gameState = Engine.GameState()
     validMoves = gameState.getValidMoves()
     moveMade = False
     gameOver = False
-    whitePlayer = False
-    blackPlayer = False
-    playerColor = False if blackPlayer and not whitePlayer else True
     AIThinking = False
-    AIProcess = None
+    AIProcess = Process()
     returnQ = Queue()
 
     loadImages()
-    pygame.display.set_caption("SwiChess")
-    pygame.display.set_icon(IMAGES["icon"])
+    pg.display.set_caption("SwiChess")
+    pg.display.set_icon(IMAGES["icon"])
     selectedSq = ()
     clicks = []
     AIThinkingTime = 0
@@ -42,8 +41,8 @@ def main():
 
     while True:
         playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
-        for e in pygame.event.get():
-            if e.type == pygame.QUIT:
+        for e in pg.event.get():
+            if e.type == pg.QUIT:
                 if AIThinking:
                     AIProcess.terminate()
                     AIThinking = False
@@ -57,37 +56,40 @@ def main():
                 print(f"Moves: {moveCountCeil}")
                 print(f"Overall thinking time: {AIThinkingTime}")
                 print(f"Overall positions calculated: {AIPositionCounter}")
-                if moveCountFloor != 0:
+                if moveCountFloor != 0 and AIPositionCounter != 0:
                     print(f"Average time per move: {AIThinkingTime / moveCountFloor}")
                     print(f"Average calculated positions per move: {AIPositionCounter / moveCountFloor}")
+                    print(f"Average time per position: {AIThinkingTime / AIPositionCounter}")
                 quit()
-            elif e.type == pygame.MOUSEBUTTONDOWN:
+            elif e.type == pg.MOUSEBUTTONDOWN:
                 if not gameOver:
-                    location = pygame.mouse.get_pos()
+                    location = pg.mouse.get_pos()
                     column = location[0] // SQ_SIZE
                     row = location[1] // SQ_SIZE
                     if not playerColor:
-                        column = DIMENSION - column - 1
-                        row = DIMENSION - row - 1
-                    if selectedSq == (column, row):
+                        column = Engine.DIMENSION - column - 1
+                        row = Engine.DIMENSION - row - 1
+                    if selectedSq == (column, row) or column > 7 or column < 0 or row > 7 or row < 0:
                         selectedSq = ()
                         clicks = []
                     else:
                         selectedSq = (column, row)
                         clicks.append(selectedSq)
                     if len(clicks) == 2 and playerTurn:
-                        move = Engine.Move(clicks[0], clicks[1], gameState.board)
-                        for i in range(len(validMoves)):
-                            if move == validMoves[i]:
-                                gameState.makeMove(validMoves[i])
+                        startSq = Engine.ONE >> (8 * clicks[0][1] + clicks[0][0])
+                        endSq = Engine.ONE >> (8 * clicks[1][1] + clicks[1][0])
+                        move = Engine.Move(startSq, endSq, gameState)
+                        for validMove in validMoves:
+                            if move == validMove:
+                                gameState.makeMove(validMove)
                                 moveMade = True
                                 selectedSq = ()
                                 clicks = []
                                 break
                         if not moveMade:
                             clicks = [selectedSq]
-            elif e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_u:
+            elif e.type == pg.KEYDOWN:
+                if e.key == pg.K_u:
                     gameState.undoMove()
                     moveMade = True
                     if gameOver:
@@ -97,7 +99,7 @@ def main():
                         AIProcess.terminate()
                         playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
                         AIThinking = False
-                if e.key == pygame.K_r:
+                if e.key == pg.K_r:
                     gameState = Engine.GameState()
                     validMoves = gameState.getValidMoves()
                     selectedSq = ()
@@ -113,19 +115,21 @@ def main():
         if not gameOver and not playerTurn:
             if not AIThinking:
                 print("thinking...")
+                print(validMoves)
                 AIThinking = True
-                AIProcess = Process(target=AI.negaMaxWithPruningMoveAI, args=(gameState, validMoves, returnQ))
+                AIProcess = Process(target=AI.negaScoutMoveAI, args=(gameState, validMoves, returnQ))
                 AIProcess.start()
             if not AIProcess.is_alive():
                 AIMove, thinkingTime, positionCounter = returnQ.get()
                 AIThinkingTime += thinkingTime
                 AIPositionCounter += positionCounter
                 print("came up with a move")
+                print(f"Thinking time: {thinkingTime} s")
+                print(f"Positions calculated: {positionCounter}")
                 if AIMove is None:
                     AIMove = AI.randomMoveAI(validMoves)
+                    print("made a random move")
                 gameState.makeMove(AIMove)
-                if len(gameState.gameLog) == 83:
-                    gameOver = True
                 moveMade = True
                 AIThinking = False
                 selectedSq = ()
@@ -137,89 +141,110 @@ def main():
         if gameState.checkmate:
             gameOver = True
             if gameState.whiteTurn:
-                drawEndGameText(screen, "Black win by checkmate")
+                drawText(screen, "Black win by checkmate")
             else:
-                drawEndGameText(screen, "White win by checkmate")
+                drawText(screen, "White win by checkmate")
         elif gameState.stalemate:
             gameOver = True
-            drawEndGameText(screen, "Stalemate")
-        pygame.display.flip()
+            drawText(screen, "Stalemate")
+        if len(gameState.gameLog) == 40:
+            gameOver = True
+        pg.display.flip()
 
 
-def highlightSq(screen, gameState, validMoves, selectedSq, playerColor):
+def highlightSq(screen: pg.Surface, gameState: Engine.GameState, validMoves: list, selectedSq: tuple, playerColor: bool):
     if selectedSq != ():
-        column, row = selectedSq
-        if gameState.board[row][column][0] == ("w" if gameState.whiteTurn else "b"):
-            s = pygame.Surface((SQ_SIZE, SQ_SIZE))
-            s.fill(pygame.Color(110, 90, 0))
+        square = Engine.ONE >> (8 * selectedSq[1] + selectedSq[0])
+        piece = gameState.getPieceBySquare(square)
+        if piece is not None:
+            s = pg.Surface((SQ_SIZE, SQ_SIZE))
+            s.fill(pg.Color(110, 90, 0))
             if playerColor:
-                screen.blit(s, (column * SQ_SIZE, row * SQ_SIZE))
+                screen.blit(s, (selectedSq[0] * SQ_SIZE, selectedSq[1] * SQ_SIZE))
             else:
-                screen.blit(s, ((DIMENSION - 1 - column) * SQ_SIZE, (DIMENSION - 1 - row) * SQ_SIZE))
+                screen.blit(s, ((Engine.DIMENSION - 1 - selectedSq[0]) * SQ_SIZE,
+                                (Engine.DIMENSION - 1 - selectedSq[1]) * SQ_SIZE))
             s.set_alpha(100)
-            s.fill(pygame.Color("yellow"))
-            for move in validMoves:
-                if move.startColumn == column and move.startRow == row:
-                    if playerColor:
-                        screen.blit(s, (move.endColumn * SQ_SIZE, move.endRow * SQ_SIZE))
-                    else:
-                        r = DIMENSION - 1 - move.endRow
-                        c = DIMENSION - 1 - move.endColumn
-                        screen.blit(s, (c * SQ_SIZE, r * SQ_SIZE))
+            s.fill(pg.Color("yellow"))
+            if piece[0] == ("w" if gameState.whiteTurn else "b"):
+                for move in validMoves:
+                    if move.startSquare == square:
+                        if playerColor:
+                            screen.blit(s, (move.endLoc % 8 * SQ_SIZE, move.endLoc // 8 * SQ_SIZE))
+                        else:
+                            r = Engine.DIMENSION - 1 - move.endLoc // 8
+                            c = Engine.DIMENSION - 1 - move.endLoc % 8
+                            screen.blit(s, (c * SQ_SIZE, r * SQ_SIZE))
 
 
-def highlightLastMove(screen, gameState, playerColor):
+def highlightLastMove(screen: pg.Surface, gameState: Engine.GameState, playerColor: bool):
     if len(gameState.gameLog) != 0:
         lastMove = gameState.gameLog[-1]
-        s = pygame.Surface((SQ_SIZE, SQ_SIZE))
+        s = pg.Surface((SQ_SIZE, SQ_SIZE))
         s.set_alpha(100)
-        s.fill(pygame.Color(0, 0, 255))
+        s.fill(pg.Color(0, 0, 255))
         if playerColor:
-            screen.blit(s, (lastMove.startColumn * SQ_SIZE, lastMove.startRow * SQ_SIZE))
-            screen.blit(s, (lastMove.endColumn * SQ_SIZE, lastMove.endRow * SQ_SIZE))
+            screen.blit(s, (lastMove.startLoc % 8 * SQ_SIZE, lastMove.startLoc // 8 * SQ_SIZE))
+            screen.blit(s, (lastMove.endLoc % 8 * SQ_SIZE, lastMove.endLoc // 8 * SQ_SIZE))
         else:
-            screen.blit(s, ((DIMENSION - 1 - lastMove.startColumn) * SQ_SIZE,
-                            (DIMENSION - 1 - lastMove.startRow) * SQ_SIZE))
-            screen.blit(s, ((DIMENSION - 1 - lastMove.endColumn) * SQ_SIZE,
-                            (DIMENSION - 1 - lastMove.endRow) * SQ_SIZE))
+            screen.blit(s, ((Engine.DIMENSION - 1 - lastMove.startLoc % 8) * SQ_SIZE,
+                            (Engine.DIMENSION - 1 - lastMove.startLoc // 8) * SQ_SIZE))
+            screen.blit(s, ((Engine.DIMENSION - 1 - lastMove.endLoc % 8) * SQ_SIZE,
+                            (Engine.DIMENSION - 1 - lastMove.endLoc // 8) * SQ_SIZE))
 
 
-def drawGameState(screen, gameState, validMoves, selectedSq, playerColor):
+# def highlightThreatTable(screen: pg.Surface, gameState: Engine.GameState):
+#     s = pg.Surface((SQ_SIZE, SQ_SIZE))
+#     s.set_alpha(100)
+#     s.fill(pg.Color(255, 0, 0))
+#     splitTableWhite = Engine.numSplit(gameState.bbOfThreats["w"])
+#     splitTableBlack = Engine.numSplit(gameState.bbOfThreats["b"])
+#     for sq in splitTableWhite:
+#         loc = Engine.getPower(sq)
+#         screen.blit(s, (loc % 8 * SQ_SIZE, loc // 8 * SQ_SIZE))
+#     s.fill(pg.Color(0, 0, 255))
+#     for sq in splitTableBlack:
+#         loc = Engine.getPower(sq)
+#         screen.blit(s, (loc % 8 * SQ_SIZE, loc // 8 * SQ_SIZE))
+
+
+def drawGameState(screen: pg.Surface, gameState: Engine.GameState, validMoves: list, selectedSq: tuple, playerColor: bool):
     drawBoard(screen)
     highlightLastMove(screen, gameState, playerColor)
     highlightSq(screen, gameState, validMoves, selectedSq, playerColor)
-    drawPieces(screen, gameState.board, playerColor)
+    # highlightThreatTable(screen, gameState)
+    drawPieces(screen, gameState, playerColor)
 
 
-def drawBoard(screen):
-    for row in range(DIMENSION):
-        for column in range(DIMENSION):
-            color = COLORS[(row + column) % 2]
-            pygame.draw.rect(screen, color, pygame.Rect(column * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+def drawBoard(screen: pg.Surface):
+    for column in range(Engine.DIMENSION):
+        for row in range(Engine.DIMENSION):
+            color = BOARD_COLORS[(row + column) % 2]
+            pg.draw.rect(screen, color, pg.Rect(column * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 
-def drawPieces(screen, board, playerColor):
+def drawPieces(screen: pg.Surface, gameState: Engine.GameState, playerColor: bool):
     if playerColor:
-        for row in range(DIMENSION):
-            for column in range(DIMENSION):
-                piece = board[row][column]
-                if piece != "--":
-                    screen.blit(IMAGES[piece], pygame.Rect(column * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+        for piece in Engine.COLORED_PIECES:
+            splitPositions = Engine.numSplit(gameState.bbOfPieces[piece])
+            for position in splitPositions:
+                pos = Engine.getPower(position)
+                screen.blit(IMAGES[piece], pg.Rect(pos % 8 * SQ_SIZE, pos // 8 * SQ_SIZE, SQ_SIZE, SQ_SIZE))
     else:
-        for row in range(DIMENSION):
-            for column in range(DIMENSION):
-                piece = board[DIMENSION - row - 1][DIMENSION - column - 1]
-                if piece != "--":
-                    screen.blit(IMAGES[piece], pygame.Rect(column * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+        for piece in Engine.COLORED_PIECES:
+            splitPositions = Engine.numSplit(gameState.bbOfPieces[piece])
+            for position in splitPositions:
+                pos = 63 - Engine.getPower(position)
+                screen.blit(IMAGES[piece], pg.Rect(pos % 8 * SQ_SIZE, pos // 8 * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 
-def drawEndGameText(screen, text):
-    font = pygame.font.SysFont("Helvetica", 32, True, False)
-    textObj = font.render(text, False, pygame.Color("gray"))
-    textLocation = pygame.Rect(0, 0, WIDTH, HEIGHT).move(WIDTH / 2 - textObj.get_width() / 2,
-                                                         HEIGHT / 2 - textObj.get_height() / 2)
+def drawText(screen: pg.Surface, text: str):
+    font = pg.font.SysFont("Helvetica", 32, True, False)
+    textObj = font.render(text, False, pg.Color("gray"))
+    textLocation = pg.Rect(0, 0, BOARD_WIDTH, BOARD_HEIGHT).move(BOARD_WIDTH / 2 - textObj.get_width() / 2,
+                                                                 BOARD_HEIGHT / 2 - textObj.get_height() / 2)
     screen.blit(textObj, textLocation)
-    textObj = font.render(text, False, pygame.Color("black"))
+    textObj = font.render(text, False, pg.Color("black"))
     screen.blit(textObj, textLocation.move(2, 2))
 
 
