@@ -20,8 +20,8 @@ def main():
     pg.init()
     screen = pg.display.set_mode((BOARD_WIDTH, BOARD_HEIGHT))
     screen.fill(pg.Color("white"))
-    whitePlayer = False
-    blackPlayer = False
+    whitePlayer = True
+    blackPlayer = True
     playerColor = False if blackPlayer and not whitePlayer else True
     gameState = Engine.GameState()
     validMoves = gameState.getValidMoves()

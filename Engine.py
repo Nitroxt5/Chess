@@ -330,8 +330,8 @@ class GameState:
         self.updateHash(move)
         self.castleRightsLog.append(self.currentCastlingRight)
         self.whiteTurn = not self.whiteTurn
-        self.createThreatTable()
         self.bbOfThreatsLog.append(deepcopy(self.bbOfThreats))
+        self.createThreatTable()
         self.inCheck()
 
     def undoMove(self):
@@ -672,6 +672,8 @@ class GameState:
             self.whiteTurn = not self.whiteTurn
             self.undoMove()
         if len(moves) == 0:
+            print(bin(self.bbOfThreats["w"]))
+            print(bin(self.bbOfThreats["b"]))
             if self.inCheck():
                 self.checkmate = True
             else:
