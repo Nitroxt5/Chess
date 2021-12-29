@@ -12,8 +12,8 @@ BOARD_COLORS = (pg.Color("white"), pg.Color("dark gray"))
 
 def loadImages():
     for piece in Engine.COLORED_PIECES:
-        IMAGES[piece] = pg.transform.scale(pg.image.load(f"images/{piece}.png"), (SQ_SIZE, SQ_SIZE))
-    IMAGES["icon"] = pg.transform.scale(pg.image.load(f"images/icon.png"), (SQ_SIZE, SQ_SIZE))
+        IMAGES[piece] = pg.transform.scale(pg.image.load(f"Chess/images/{piece}.png"), (SQ_SIZE, SQ_SIZE))
+    IMAGES["icon"] = pg.transform.scale(pg.image.load(f"Chess/images/icon.png"), (SQ_SIZE, SQ_SIZE))
 
 
 def main():
@@ -104,6 +104,8 @@ def main():
                     validMoves = gameState.getValidMoves()
                     selectedSq = ()
                     clicks = []
+                    AIThinkingTime = 0
+                    AIPositionCounter = 0
                     if gameOver:
                         gameOver = False
                         playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
@@ -193,26 +195,10 @@ def highlightLastMove(screen: pg.Surface, gameState: Engine.GameState, playerCol
                             (Engine.DIMENSION - 1 - lastMove.endLoc // 8) * SQ_SIZE))
 
 
-# def highlightThreatTable(screen: pg.Surface, gameState: Engine.GameState):
-#     s = pg.Surface((SQ_SIZE, SQ_SIZE))
-#     s.set_alpha(100)
-#     s.fill(pg.Color(255, 0, 0))
-#     splitTableWhite = Engine.numSplit(gameState.bbOfThreats["w"])
-#     splitTableBlack = Engine.numSplit(gameState.bbOfThreats["b"])
-#     for sq in splitTableWhite:
-#         loc = Engine.getPower(sq)
-#         screen.blit(s, (loc % 8 * SQ_SIZE, loc // 8 * SQ_SIZE))
-#     s.fill(pg.Color(0, 0, 255))
-#     for sq in splitTableBlack:
-#         loc = Engine.getPower(sq)
-#         screen.blit(s, (loc % 8 * SQ_SIZE, loc // 8 * SQ_SIZE))
-
-
 def drawGameState(screen: pg.Surface, gameState: Engine.GameState, validMoves: list, selectedSq: tuple, playerColor: bool):
     drawBoard(screen)
     highlightLastMove(screen, gameState, playerColor)
     highlightSq(screen, gameState, validMoves, selectedSq, playerColor)
-    # highlightThreatTable(screen, gameState)
     drawPieces(screen, gameState, playerColor)
 
 
