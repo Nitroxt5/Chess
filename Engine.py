@@ -672,8 +672,6 @@ class GameState:
             self.whiteTurn = not self.whiteTurn
             self.undoMove()
         if len(moves) == 0:
-            print(bin(self.bbOfThreats["w"]))
-            print(bin(self.bbOfThreats["b"]))
             if self.inCheck():
                 self.checkmate = True
             else:
