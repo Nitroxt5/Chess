@@ -50,19 +50,12 @@ def powTo(x: int, n: int):
     return y
 
 
-def numSplit(number: int):
-    num1 = number
-    num2 = num1
+def numSplit(number):
     result = []
-    counter = 0
-    while num1:
-        if num2 % 2 == 1:
-            num2 = num1 - powTo(2, counter)
-            num1 = num2
-            result.append(powTo(2, counter))
-            counter = 0
-        num2 >>= 1
-        counter += 1
+    while number:
+        tmp = number & -number
+        result.append(tmp)
+        number -= tmp
     return result
 
 

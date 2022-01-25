@@ -20,8 +20,8 @@ def main():
     pg.init()
     screen = pg.display.set_mode((BOARD_WIDTH, BOARD_HEIGHT))
     screen.fill(pg.Color("white"))
-    whitePlayer = True
-    blackPlayer = True
+    whitePlayer = False
+    blackPlayer = False
     playerColor = False if blackPlayer and not whitePlayer else True
     gameState = Engine.GameState()
     validMoves = gameState.getValidMoves()
@@ -149,8 +149,8 @@ def main():
         elif gameState.stalemate:
             gameOver = True
             drawText(screen, "Stalemate")
-        if len(gameState.gameLog) == 40:
-            gameOver = True
+        # if len(gameState.gameLog) == 40:
+        #     gameOver = True
         pg.display.flip()
 
 
