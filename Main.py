@@ -3,7 +3,6 @@ import pygame as pg
 import AI
 from math import ceil, floor
 from multiprocessing import Process, Queue
-
 BOARD_WIDTH = BOARD_HEIGHT = 512
 SQ_SIZE = BOARD_HEIGHT // Engine.DIMENSION
 IMAGES = {}
@@ -12,8 +11,8 @@ BOARD_COLORS = (pg.Color("white"), pg.Color("dark gray"))
 
 def loadImages():
     for piece in Engine.COLORED_PIECES:
-        IMAGES[piece] = pg.transform.scale(pg.image.load(f"Chess/images/{piece}.png"), (SQ_SIZE, SQ_SIZE))
-    IMAGES["icon"] = pg.transform.scale(pg.image.load(f"Chess/images/icon.png"), (SQ_SIZE, SQ_SIZE))
+        IMAGES[piece] = pg.transform.scale(pg.image.load(f"images/{piece}.png"), (SQ_SIZE, SQ_SIZE))
+    IMAGES["icon"] = pg.transform.scale(pg.image.load(f"images/icon.png"), (SQ_SIZE, SQ_SIZE))
 
 
 def main():
@@ -149,8 +148,8 @@ def main():
         elif gameState.stalemate:
             gameOver = True
             drawText(screen, "Stalemate")
-        # if len(gameState.gameLog) == 40:
-        #     gameOver = True
+        if len(gameState.gameLog) == 40:
+            gameOver = True
         pg.display.flip()
 
 
@@ -236,3 +235,4 @@ def drawText(screen: pg.Surface, text: str):
 
 if __name__ == "__main__":
     main()
+    pg.quit()
