@@ -117,17 +117,17 @@ def negaScoutAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta:
         gameState.makeMove(move)
         inTable = False
         score = 0
-        if gameState.boardHash in hashTableForBestMoves:
-            if hashTableForBestMoves[gameState.boardHash][0] >= depth:
-                score = hashTableForBestMoves[gameState.boardHash][1]
+        if (gameState.boardHash, gameState.whiteTurn) in hashTableForBestMoves:
+            if hashTableForBestMoves[(gameState.boardHash, gameState.whiteTurn)][0] >= depth:
+                score = hashTableForBestMoves[(gameState.boardHash, gameState.whiteTurn)][1]
+                move.goodScore = True
                 inTable = True
         if not inTable:
-            tupleGameLog = tuple([mov.moveID for mov in gameState.gameLog])
-            if tupleGameLog in hashTableForValidMoves:
-                nextMoves = hashTableForValidMoves[tupleGameLog]
+            if (gameState.boardHash, gameState.whiteTurn) in hashTableForValidMoves:
+                nextMoves = hashTableForValidMoves[(gameState.boardHash, gameState.whiteTurn)]
             else:
                 nextMoves = gameState.getValidMoves()
-                hashTableForValidMoves[tupleGameLog] = nextMoves
+                hashTableForValidMoves[(gameState.boardHash, gameState.whiteTurn)] = nextMoves
             if depth == DEPTH or move.isCapture or gameState.isWhiteInCheck or gameState.isBlackInCheck:
                 score = -negaScoutAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1, globalDepth)
             else:
@@ -138,13 +138,13 @@ def negaScoutAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta:
         gameState.undoMove()
         if score > alpha:
             alpha = score
-            if gameState.boardHash in hashTableForBestMoves:
-                if depth > hashTableForBestMoves[gameState.boardHash][0]:
-                    hashTableForBestMoves[gameState.boardHash] = (depth, score)
-                if depth == hashTableForBestMoves[gameState.boardHash][0] and score > hashTableForBestMoves[gameState.boardHash][1]:
-                    hashTableForBestMoves[gameState.boardHash] = (depth, score)
+            if (gameState.boardHash, gameState.whiteTurn) in hashTableForBestMoves:
+                if depth > hashTableForBestMoves[(gameState.boardHash, gameState.whiteTurn)][0]:
+                    hashTableForBestMoves[(gameState.boardHash, gameState.whiteTurn)] = (depth, score)
+                if depth == hashTableForBestMoves[(gameState.boardHash, gameState.whiteTurn)][0] and score > hashTableForBestMoves[(gameState.boardHash, gameState.whiteTurn)][1]:
+                    hashTableForBestMoves[(gameState.boardHash, gameState.whiteTurn)] = (depth, score)
             else:
-                hashTableForBestMoves[gameState.boardHash] = (depth, score)
+                hashTableForBestMoves[(gameState.boardHash, gameState.whiteTurn)] = (depth, score)
             if depth == globalDepth:
                 move.exactScore = score
                 move.estimatedScore = score

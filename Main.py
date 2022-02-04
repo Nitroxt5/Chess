@@ -20,7 +20,7 @@ def loadImages():
     IMAGES["board"] = ImageTk.PhotoImage(Image.open(f"images/board.png").resize((BOARD_HEIGHT, BOARD_WIDTH)))
 
 
-whitePlayer = True
+whitePlayer = False
 blackPlayer = False
 playerColor = False if blackPlayer and not whitePlayer else True
 
@@ -109,8 +109,8 @@ def mouseOnClick(event):
                 selectedSq = (column, row)
                 clicks.append(selectedSq)
             if len(clicks) == 2 and playerTurn:
-                startSq = Engine.ONE >> (8 * clicks[0][1] + clicks[0][0])
-                endSq = Engine.ONE >> (8 * clicks[1][1] + clicks[1][0])
+                startSq = Engine.bbOfSquares[clicks[0][1]][clicks[0][0]]
+                endSq = Engine.bbOfSquares[clicks[1][1]][clicks[1][0]]
                 move = Engine.Move(startSq, endSq, gameState)
                 for validMove in validMoves:
                     if move == validMove:
@@ -177,14 +177,14 @@ def gameOverCheck():
     elif gameState.stalemate:
         gameOver = True
         drawText("Stalemate")
-    # if len(gameState.gameLog) == 40:
-    #     gameOver = True
+    if len(gameState.gameLog) == 40:
+        gameOver = True
 
 
 def highlightSq():
     global gameState, selectedSq
     if selectedSq != ():
-        square = Engine.ONE >> (8 * selectedSq[1] + selectedSq[0])
+        square = Engine.bbOfSquares[selectedSq[1]][selectedSq[0]]
         piece = gameState.getPieceBySquare(square)
         if piece is not None:
             if playerColor:
