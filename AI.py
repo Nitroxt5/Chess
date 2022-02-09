@@ -1,11 +1,13 @@
-import random
-import time
-import Engine
+from TestDLL import getBitsCount, getPower
+from random import randint
+from time import perf_counter
+from Engine import GameState, Move, bbOfRows, bbOfColumns, bbOfCorrections, bbOfCenter, COLORS, CASTLE_SIDES, pieceScores, numSplit
 from multiprocessing import Queue
 
 CHECKMATE = 100000
 STALEMATE = 0
 DEPTH = 4
+MAX_DEPTH = 6
 R = 1 if DEPTH <= 3 else 2
 nextMove = None
 counter = 0
@@ -69,29 +71,29 @@ piecePositionScores = {"Q": queenPositionScore, "R": rookPositionScore, "B": bis
                        "N": knightPositionScore, "bp": blackPawnPositionScore, "wp": whitePawnPositionScore}
 
 
-def randomMoveAI(validMoves: list) -> Engine.Move:
-    return validMoves[random.randint(0, len(validMoves) - 1)]
+def randomMoveAI(validMoves: list) -> Move:
+    return validMoves[randint(0, len(validMoves) - 1)]
 
 
-def negaScoutMoveAI(gameState: Engine.GameState, validMoves: list, returnQ: Queue):
+def negaScoutMoveAI(gameState: GameState, validMoves: list, returnQ: Queue):
     global nextMove, counter
     nextMove = None
     counter = 0
-    start = time.perf_counter()
+    start = perf_counter()
     if validMoves is not None:
         if len(validMoves) > 8:
             for d in range(DEPTH):
                 currentDepth = d + 1
-                score = negaScoutAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, currentDepth, currentDepth)
+                score = negaScoutAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, currentDepth, currentDepth, 0)
                 if score == CHECKMATE:
                     break
         else:
-            negaScoutAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, DEPTH, DEPTH)
-    thinkingTime = time.perf_counter() - start
+            negaScoutAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, DEPTH, DEPTH, 0)
+    thinkingTime = perf_counter() - start
     returnQ.put((nextMove, thinkingTime, counter))
 
 
-def oneDepthSearch(gameState: Engine.GameState, validMoves: list, turn: int, depth: int):
+def oneDepthSearch(gameState: GameState, validMoves: list, turn: int, depth: int):
     for move in validMoves:
         if depth in killerMoves:
             if move.moveID == killerMoves[depth]:
@@ -102,8 +104,9 @@ def oneDepthSearch(gameState: Engine.GameState, validMoves: list, turn: int, dep
             gameState.undoMove()
 
 
-def negaScoutAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta: int, turn: int, depth: int, globalDepth: int):
+def negaScoutAI(gameState: GameState, validMoves: list, alpha: int, beta: int, turn: int, depth: int, globalDepth: int, calls: int):
     global nextMove, counter
+    calls += 1
     counter += 1
     if depth <= 0 or gameState.checkmate:
         return turn * scoreBoard(gameState, validMoves)
@@ -129,12 +132,15 @@ def negaScoutAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta:
                 nextMoves = gameState.getValidMoves()
                 hashTableForValidMoves[(gameState.boardHash, gameState.whiteTurn)] = nextMoves
             if depth == DEPTH or move.isCapture or gameState.isWhiteInCheck or gameState.isBlackInCheck:
-                score = -negaScoutAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1, globalDepth)
+                deepening = 1
+                if depth == DEPTH or calls + DEPTH >= MAX_DEPTH:
+                    deepening = 1
+                score = -negaScoutAI(gameState, nextMoves, -beta, -alpha, -turn, depth - deepening, globalDepth, calls)
             else:
                 silentMoveCounter -= 1
-                score = -negaScoutAI(gameState, nextMoves, -alpha - 1, -alpha, -turn, depth - R, globalDepth)
+                score = -negaScoutAI(gameState, nextMoves, -alpha - 1, -alpha, -turn, depth - R, globalDepth, calls)
                 if alpha < score < beta:
-                    score = -negaScoutAI(gameState, nextMoves, -beta, -score, -turn, depth - 1, globalDepth)
+                    score = -negaScoutAI(gameState, nextMoves, -beta, -score, -turn, depth - 1, globalDepth, calls)
         gameState.undoMove()
         if score > alpha:
             alpha = score
@@ -158,26 +164,26 @@ def negaScoutAI(gameState: Engine.GameState, validMoves: list, alpha: int, beta:
     return alpha
 
 
-def scoreProtectionsAndThreats(gameState: Engine.GameState):
+def scoreProtectionsAndThreats(gameState: GameState):
     whiteThreats = gameState.bbOfThreats["w"] & gameState.bbOfOccupiedSquares["b"]
     whiteProtections = gameState.bbOfThreats["w"] & gameState.bbOfOccupiedSquares["w"]
     blackThreats = gameState.bbOfThreats["b"] & gameState.bbOfOccupiedSquares["w"]
     blackProtections = gameState.bbOfThreats["b"] & gameState.bbOfOccupiedSquares["b"]
-    threatsDifference = Engine.getBitsCount(whiteThreats) - Engine.getBitsCount(blackThreats)
-    protectionsDifference = Engine.getBitsCount(whiteProtections) - Engine.getBitsCount(blackProtections)
+    threatsDifference = getBitsCount(whiteThreats) - getBitsCount(blackThreats)
+    protectionsDifference = getBitsCount(whiteProtections) - getBitsCount(blackProtections)
     return threatsDifference * threatCost + protectionsDifference * protectionCost
 
 
-def scoreRookPositioning(gameState: Engine.GameState):
+def scoreRookPositioning(gameState: GameState):
     score = 0
-    for value in Engine.bbOfColumns.values():
+    for value in bbOfColumns.values():
         whiteRookPos = value & gameState.bbOfPieces["wR"]
         blackRookPos = value & gameState.bbOfPieces["bR"]
         if whiteRookPos | blackRookPos:
             whitePawnsPos = value & gameState.bbOfPieces["wp"]
             blackPawnsPos = value & gameState.bbOfPieces["bp"]
-            whitePawnsCount = Engine.getBitsCount(whitePawnsPos)
-            blackPawnsCount = Engine.getBitsCount(blackPawnsPos)
+            whitePawnsCount = getBitsCount(whitePawnsPos)
+            blackPawnsCount = getBitsCount(blackPawnsPos)
             if whiteRookPos:
                 if blackPawnsCount == 0 and whitePawnsCount == 1:
                     score += 15
@@ -192,67 +198,69 @@ def scoreRookPositioning(gameState: Engine.GameState):
                     score -= 20
                 elif whitePawnsCount + blackPawnsCount == 0:
                     score -= 30
-    whiteRookRowPos = Engine.bbOfRows["7"] & gameState.bbOfPieces["wR"]
-    blackRookRowPos = Engine.bbOfRows["2"] & gameState.bbOfPieces["bR"]
+    whiteRookRowPos = bbOfRows["7"] & gameState.bbOfPieces["wR"]
+    blackRookRowPos = bbOfRows["2"] & gameState.bbOfPieces["bR"]
     if blackRookRowPos:
-        rooksCount = Engine.getBitsCount(blackRookRowPos)
+        rooksCount = getBitsCount(blackRookRowPos)
         score -= rooksCount * 20
     if whiteRookRowPos:
-        rooksCount = Engine.getBitsCount(whiteRookRowPos)
+        rooksCount = getBitsCount(whiteRookRowPos)
         score += rooksCount * 20
-    whiteSplitPositions = Engine.numSplit(gameState.bbOfPieces["wR"])
-    blackSplitPositions = Engine.numSplit(gameState.bbOfPieces["bR"])
+    whiteSplitPositions = numSplit(gameState.bbOfPieces["wR"])
+    blackSplitPositions = numSplit(gameState.bbOfPieces["bR"])
+    score += (len(whiteSplitPositions) - len(blackSplitPositions)) * pieceScores["R"]
     for position in whiteSplitPositions:
-        pos = Engine.getPower(position)
+        pos = getPower(position)
         score += piecePositionScores["R"][pos // 8][pos % 8] * 10
     for position in blackSplitPositions:
-        pos = Engine.getPower(position)
+        pos = getPower(position)
         score -= piecePositionScores["R"][pos // 8][pos % 8] * 10
     return score
 
 
-def scoreKnightPositioning(gameState: Engine.GameState):
+def scoreKnightPositioning(gameState: GameState):
     knightMoves = {"w": 0, "b": 0}
-    for color in Engine.COLORS:
+    for color in COLORS:
         piece = color + "N"
-        knightMoves[color] |= ((gameState.bbOfPieces[piece] & Engine.bbOfCorrections["h"]
-                                                            & Engine.bbOfCorrections["78"]) << 15)
-        knightMoves[color] |= ((gameState.bbOfPieces[piece] & Engine.bbOfCorrections["gh"]
-                                                            & Engine.bbOfCorrections["8"]) << 6)
-        knightMoves[color] |= ((gameState.bbOfPieces[piece] & Engine.bbOfCorrections["gh"]
-                                                            & Engine.bbOfCorrections["1"]) >> 10)
-        knightMoves[color] |= ((gameState.bbOfPieces[piece] & Engine.bbOfCorrections["h"]
-                                                            & Engine.bbOfCorrections["12"]) >> 17)
-        knightMoves[color] |= ((gameState.bbOfPieces[piece] & Engine.bbOfCorrections["a"]
-                                                            & Engine.bbOfCorrections["12"]) >> 15)
-        knightMoves[color] |= ((gameState.bbOfPieces[piece] & Engine.bbOfCorrections["ab"]
-                                                            & Engine.bbOfCorrections["1"]) >> 6)
-        knightMoves[color] |= ((gameState.bbOfPieces[piece] & Engine.bbOfCorrections["ab"]
-                                                            & Engine.bbOfCorrections["8"]) << 10)
-        knightMoves[color] |= ((gameState.bbOfPieces[piece] & Engine.bbOfCorrections["a"]
-                                                            & Engine.bbOfCorrections["78"]) << 17)
-    score = (Engine.getBitsCount(knightMoves["w"]) - Engine.getBitsCount(knightMoves["b"])) * 3
-    whiteSplitPositions = Engine.numSplit(gameState.bbOfPieces["wN"])
-    blackSplitPositions = Engine.numSplit(gameState.bbOfPieces["bN"])
+        knightMoves[color] |= ((gameState.bbOfPieces[piece] & bbOfCorrections["h"]
+                                                            & bbOfCorrections["78"]) << 15)
+        knightMoves[color] |= ((gameState.bbOfPieces[piece] & bbOfCorrections["gh"]
+                                                            & bbOfCorrections["8"]) << 6)
+        knightMoves[color] |= ((gameState.bbOfPieces[piece] & bbOfCorrections["gh"]
+                                                            & bbOfCorrections["1"]) >> 10)
+        knightMoves[color] |= ((gameState.bbOfPieces[piece] & bbOfCorrections["h"]
+                                                            & bbOfCorrections["12"]) >> 17)
+        knightMoves[color] |= ((gameState.bbOfPieces[piece] & bbOfCorrections["a"]
+                                                            & bbOfCorrections["12"]) >> 15)
+        knightMoves[color] |= ((gameState.bbOfPieces[piece] & bbOfCorrections["ab"]
+                                                            & bbOfCorrections["1"]) >> 6)
+        knightMoves[color] |= ((gameState.bbOfPieces[piece] & bbOfCorrections["ab"]
+                                                            & bbOfCorrections["8"]) << 10)
+        knightMoves[color] |= ((gameState.bbOfPieces[piece] & bbOfCorrections["a"]
+                                                            & bbOfCorrections["78"]) << 17)
+    score = (getBitsCount(knightMoves["w"]) - getBitsCount(knightMoves["b"])) * 3
+    whiteSplitPositions = numSplit(gameState.bbOfPieces["wN"])
+    blackSplitPositions = numSplit(gameState.bbOfPieces["bN"])
+    score += (len(whiteSplitPositions) - len(blackSplitPositions)) * pieceScores["N"]
     for position in whiteSplitPositions:
-        pos = Engine.getPower(position)
+        pos = getPower(position)
         score += piecePositionScores["N"][pos // 8][pos % 8] * 10
     for position in blackSplitPositions:
-        pos = Engine.getPower(position)
+        pos = getPower(position)
         score -= piecePositionScores["N"][pos // 8][pos % 8] * 10
     return score
 
 
-def scoreBishopPositioning(gameState: Engine.GameState):
+def scoreBishopPositioning(gameState: GameState):
     score = 0
-    for color in Engine.COLORS:
+    for color in COLORS:
         piece = color + "B"
         enemyColor = "w" if color == "b" else "b"
         diffCount = 1 if color == "w" else -1
-        splitPositions = Engine.numSplit(gameState.bbOfPieces[piece])
+        splitPositions = numSplit(gameState.bbOfPieces[piece])
         for splitPosition in splitPositions:
             checkingSq = splitPosition
-            while checkingSq & Engine.bbOfCorrections["h"] & Engine.bbOfCorrections["8"]:
+            while checkingSq & bbOfCorrections["h"] & bbOfCorrections["8"]:
                 checkingSq <<= 7
                 if checkingSq & gameState.bbOfPieces[f"{color}p"]:
                     break
@@ -261,7 +269,7 @@ def scoreBishopPositioning(gameState: Engine.GameState):
                     break
                 score += diffCount
             checkingSq = splitPosition
-            while checkingSq & Engine.bbOfCorrections["h"] & Engine.bbOfCorrections["1"]:
+            while checkingSq & bbOfCorrections["h"] & bbOfCorrections["1"]:
                 checkingSq >>= 9
                 if checkingSq & gameState.bbOfPieces[f"{color}p"]:
                     break
@@ -270,7 +278,7 @@ def scoreBishopPositioning(gameState: Engine.GameState):
                     break
                 score += diffCount
             checkingSq = splitPosition
-            while checkingSq & Engine.bbOfCorrections["a"] & Engine.bbOfCorrections["1"]:
+            while checkingSq & bbOfCorrections["a"] & bbOfCorrections["1"]:
                 checkingSq >>= 7
                 if checkingSq & gameState.bbOfPieces[f"{color}p"]:
                     break
@@ -279,7 +287,7 @@ def scoreBishopPositioning(gameState: Engine.GameState):
                     break
                 score += diffCount
             checkingSq = splitPosition
-            while checkingSq & Engine.bbOfCorrections["a"] & Engine.bbOfCorrections["8"]:
+            while checkingSq & bbOfCorrections["a"] & bbOfCorrections["8"]:
                 checkingSq <<= 9
                 if checkingSq & gameState.bbOfPieces[f"{color}p"]:
                     break
@@ -287,19 +295,20 @@ def scoreBishopPositioning(gameState: Engine.GameState):
                     score += diffCount
                     break
                 score += diffCount
-    whiteSplitPositions = Engine.numSplit(gameState.bbOfPieces["wB"])
-    blackSplitPositions = Engine.numSplit(gameState.bbOfPieces["bB"])
+    whiteSplitPositions = numSplit(gameState.bbOfPieces["wB"])
+    blackSplitPositions = numSplit(gameState.bbOfPieces["bB"])
     score *= 4
+    score += (len(whiteSplitPositions) - len(blackSplitPositions)) * pieceScores["B"]
     for position in whiteSplitPositions:
-        pos = Engine.getPower(position)
+        pos = getPower(position)
         score += piecePositionScores["B"][pos // 8][pos % 8] * 10
     for position in blackSplitPositions:
-        pos = Engine.getPower(position)
+        pos = getPower(position)
         score -= piecePositionScores["B"][pos // 8][pos % 8] * 10
     return score
 
 
-def scoreKingSafety(gameState: Engine.GameState):
+def scoreKingSafety(gameState: GameState):
     score = 0
     if gameState.isWhiteCastled:
         score += 50
@@ -309,39 +318,39 @@ def scoreKingSafety(gameState: Engine.GameState):
         score -= 20
     if gameState.isBlackInCheck:
         score += 20
-    for key, value in Engine.CASTLE_SIDES.items():
+    for key, value in CASTLE_SIDES.items():
         if not gameState.getCastleRight(value):
             if key[0] == "w" and not gameState.isWhiteCastled:
                 score -= 70
             elif key[0] == "b" and not gameState.isBlackCastled:
                 score += 70
-    for value in Engine.bbOfColumns.values():
+    for value in bbOfColumns.values():
         whiteKingPos = value & gameState.bbOfPieces["wK"]
         blackKingPos = value & gameState.bbOfPieces["bK"]
         if whiteKingPos:
             whitePawnsPos = value & gameState.bbOfPieces["wp"]
-            whitePawnsCount = Engine.getBitsCount(whitePawnsPos)
+            whitePawnsCount = getBitsCount(whitePawnsPos)
             if whitePawnsCount == 0:
                 score -= 30
         if blackKingPos:
             blackPawnsPos = value & gameState.bbOfPieces["bp"]
-            blackPawnsCount = Engine.getBitsCount(blackPawnsPos)
+            blackPawnsCount = getBitsCount(blackPawnsPos)
             if blackPawnsCount == 0:
                 score += 30
     return score
 
 
-def scorePawnPositioning(gameState: Engine.GameState):
+def scorePawnPositioning(gameState: GameState):
     score = 0
-    for value in Engine.bbOfColumns.values():
+    for value in bbOfColumns.values():
         whitePawnsColumn = value & gameState.bbOfPieces["wp"]
         blackPawnsColumn = value & gameState.bbOfPieces["bp"]
         if (whitePawnsColumn | blackPawnsColumn) - whitePawnsColumn == 0:
             score += 10
         if (whitePawnsColumn | blackPawnsColumn) - blackPawnsColumn == 0:
             score -= 10
-        whitePawnsCount = Engine.getBitsCount(whitePawnsColumn)
-        blackPawnsCount = Engine.getBitsCount(blackPawnsColumn)
+        whitePawnsCount = getBitsCount(whitePawnsColumn)
+        blackPawnsCount = getBitsCount(blackPawnsColumn)
         if whitePawnsCount == 2:
             score -= 20
         if whitePawnsCount >= 3:
@@ -350,39 +359,41 @@ def scorePawnPositioning(gameState: Engine.GameState):
             score += 20
         if blackPawnsCount >= 3:
             score += 30
-    whiteSplitPositions = Engine.numSplit(gameState.bbOfPieces["wp"])
-    blackSplitPositions = Engine.numSplit(gameState.bbOfPieces["bp"])
+    whiteSplitPositions = numSplit(gameState.bbOfPieces["wp"])
+    blackSplitPositions = numSplit(gameState.bbOfPieces["bp"])
+    score += (len(whiteSplitPositions) - len(blackSplitPositions)) * pieceScores["p"]
     for position in whiteSplitPositions:
-        pos = Engine.getPower(position)
+        pos = getPower(position)
         score += piecePositionScores["wp"][pos // 8][pos % 8] * 10
     for position in blackSplitPositions:
-        pos = Engine.getPower(position)
+        pos = getPower(position)
         score -= piecePositionScores["bp"][pos // 8][pos % 8] * 10
     return score
 
 
-def scoreQueenPositioning(gameState: Engine.GameState):
+def scoreQueenPositioning(gameState: GameState):
     score = 0
     if len(gameState.gameLog) < 20 and gameState.gameLog[-1].movedPiece[1] == "Q":
         if gameState.whiteTurn:
             score += 20
         else:
             score -= 20
-    whiteSplitPositions = Engine.numSplit(gameState.bbOfPieces["wQ"])
-    blackSplitPositions = Engine.numSplit(gameState.bbOfPieces["bQ"])
+    whiteSplitPositions = numSplit(gameState.bbOfPieces["wQ"])
+    blackSplitPositions = numSplit(gameState.bbOfPieces["bQ"])
+    score += (len(whiteSplitPositions) - len(blackSplitPositions)) * pieceScores["Q"]
     for position in whiteSplitPositions:
-        pos = Engine.getPower(position)
+        pos = getPower(position)
         score += piecePositionScores["Q"][pos // 8][pos % 8] * 10
     for position in blackSplitPositions:
-        pos = Engine.getPower(position)
+        pos = getPower(position)
         score -= piecePositionScores["Q"][pos // 8][pos % 8] * 10
     return score
 
 
-def scoreCenterControl(gameState: Engine.GameState):
-    whiteCenterControl = Engine.bbOfCenter & gameState.bbOfOccupiedSquares["w"]
-    blackCenterControl = Engine.bbOfCenter & gameState.bbOfOccupiedSquares["b"]
-    return (Engine.getBitsCount(whiteCenterControl) - Engine.getBitsCount(blackCenterControl)) * 30
+def scoreCenterControl(gameState: GameState):
+    whiteCenterControl = bbOfCenter & gameState.bbOfOccupiedSquares["w"]
+    blackCenterControl = bbOfCenter & gameState.bbOfOccupiedSquares["b"]
+    return (getBitsCount(whiteCenterControl) - getBitsCount(blackCenterControl)) * 30
 
 
 pieceAdditionalPositionScores = {"Ks": scoreKingSafety, "Q": scoreQueenPositioning, "R": scoreRookPositioning,
@@ -390,7 +401,7 @@ pieceAdditionalPositionScores = {"Ks": scoreKingSafety, "Q": scoreQueenPositioni
                                  "Cs": scoreCenterControl, "PT": scoreProtectionsAndThreats}
 
 
-def scoreBoard(gameState: Engine.GameState, validMoves: list):
+def scoreBoard(gameState: GameState, validMoves: list):
     if gameState.checkmate:
         if gameState.whiteTurn:
             return -CHECKMATE
@@ -405,5 +416,4 @@ def scoreBoard(gameState: Engine.GameState, validMoves: list):
         score -= len(validMoves)
     for value in pieceAdditionalPositionScores.values():
         score += value(gameState)
-    score += gameState.pieceScoreDiff
     return score

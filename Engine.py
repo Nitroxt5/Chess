@@ -1,5 +1,6 @@
+from TestDLL import getPower
 import ctypes
-import random
+from random import randint
 from copy import deepcopy
 
 MAX_INT = 18446744073709551615
@@ -41,42 +42,13 @@ bbOfCorrections = {"a": 0b011111110111111101111111011111110111111101111111011111
                    "78": 0b0000000000000000111111111111111111111111111111111111111111111111}
 
 
-def powTo(x: int, n: int):
-    y = 1
-    while n > 0:
-        if n % 2 == 1:
-            y *= x
-        x *= x
-        n >>= 1
-    return y
-
-
-def numSplit(number):
+def numSplit(number: int):
     result = []
     while number:
         tmp = number & -number
         result.append(tmp)
         number -= tmp
     return result
-
-
-def getPower(number: int):
-    num = number
-    counter = 0
-    while num:
-        num >>= 1
-        counter += 1
-    return 64 - counter
-
-
-def getBitsCount(number: int):
-    num = number
-    counter = 0
-    while num:
-        if num & 1:
-            counter += 1
-        num >>= 1
-    return counter
 
 
 class GameState:
@@ -130,7 +102,6 @@ class GameState:
         self.isBlackCastled = False
         self.isWhiteInCheck = False
         self.isBlackInCheck = False
-        self.pieceScoreDiff = 0
         self.zobristTable = []
         self.boardHashLog = []
         self.boardHash = 0
@@ -140,7 +111,7 @@ class GameState:
         for i in range(64):
             newList = []
             for j in range(12):
-                newList.append(random.randint(0, MAX_INT))
+                newList.append(randint(0, MAX_INT))
             self.zobristTable.append(newList)
         for piece in COLORED_PIECES:
             splitPositions = numSplit(self.bbOfPieces[piece])
@@ -281,9 +252,6 @@ class GameState:
         self.createRookThreatTable(color, True)
 
     def makeMove(self, move):
-        if move.capturedPiece is not None:
-            color = 1 if self.whiteTurn else -1
-            self.pieceScoreDiff += color * pieceScores[move.capturedPiece[1]]
         self.unsetSqState(move.capturedPiece, move.endSquare)
         self.unsetSqState(move.movedPiece, move.startSquare)
         self.gameLog.append(move)
@@ -331,9 +299,6 @@ class GameState:
     def undoMove(self):
         if len(self.gameLog) != 0:
             move = self.gameLog.pop()
-            if move.capturedPiece is not None:
-                color = 1 if self.whiteTurn else -1
-                self.pieceScoreDiff += color * pieceScores[move.capturedPiece[1]]
             self.boardHash = self.boardHashLog.pop()
             if move.isPawnPromotion:
                 self.unsetSqState(f"{move.movedPiece[0]}Q", move.endSquare)
@@ -687,9 +652,15 @@ class GameState:
     def inCheck(self):
         if self.whiteTurn:
             self.isWhiteInCheck = self.isSquareAttacked(self.bbOfPieces["wK"])
+            self.whiteTurn = not self.whiteTurn
+            self.isBlackInCheck = self.isSquareAttacked(self.bbOfPieces["bK"])
+            self.whiteTurn = not self.whiteTurn
             return self.isWhiteInCheck
         else:
             self.isBlackInCheck = self.isSquareAttacked(self.bbOfPieces["bK"])
+            self.whiteTurn = not self.whiteTurn
+            self.isWhiteInCheck = self.isSquareAttacked(self.bbOfPieces["wK"])
+            self.whiteTurn = not self.whiteTurn
             return self.isBlackInCheck
 
     def isSquareAttacked(self, square: int):

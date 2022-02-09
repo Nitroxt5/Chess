@@ -1,17 +1,19 @@
-import Engine
+from TestDLL import getPower
 import tkinter as tk
 from PIL import Image, ImageTk
-import AI
 from math import ceil, floor
 from multiprocessing import Process, Queue
+from AI import negaScoutMoveAI, randomMoveAI
+from Engine import COLORED_PIECES, DIMENSION, GameState, Move, bbOfSquares, numSplit
+
 
 BOARD_WIDTH = BOARD_HEIGHT = 512
-SQ_SIZE = BOARD_HEIGHT // Engine.DIMENSION
+SQ_SIZE = BOARD_HEIGHT // DIMENSION
 IMAGES = {}
 
 
 def loadImages():
-    for piece in Engine.COLORED_PIECES:
+    for piece in COLORED_PIECES:
         IMAGES[piece] = ImageTk.PhotoImage(Image.open(f"images/{piece}.png").resize((SQ_SIZE, SQ_SIZE)))
     IMAGES["icon"] = ImageTk.PhotoImage(Image.open(f"images/icon.png").resize((SQ_SIZE, SQ_SIZE)))
     IMAGES["brown"] = ImageTk.PhotoImage(Image.open(f"images/brown.png").resize((SQ_SIZE, SQ_SIZE)))
@@ -24,7 +26,7 @@ whitePlayer = False
 blackPlayer = False
 playerColor = False if blackPlayer and not whitePlayer else True
 
-gameState = Engine.GameState()
+gameState = GameState()
 validMoves = gameState.getValidMoves()
 playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
 moveMade = False
@@ -42,6 +44,8 @@ def onQuit():
     global AIThinking, AIProcess, gameState
     if AIThinking:
         AIProcess.terminate()
+        AIProcess.join()
+        AIProcess.close()
         AIThinking = False
     print(gameState.gameLog)
     if not whitePlayer and not blackPlayer:
@@ -69,6 +73,8 @@ def undo(event):
         gameOver = False
     if AIThinking:
         AIProcess.terminate()
+        AIProcess.join()
+        AIProcess.close()
         AIThinking = False
     playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
     drawGameState()
@@ -76,7 +82,7 @@ def undo(event):
 
 def remake(event):
     global gameState, validMoves, selectedSq, clicks, AIThinkingTime, AIPositionCounter, gameOver, playerTurn, moveMade, AIThinking, AIProcess
-    gameState = Engine.GameState()
+    gameState = GameState()
     validMoves = gameState.getValidMoves()
     selectedSq = ()
     clicks = []
@@ -87,6 +93,8 @@ def remake(event):
     moveMade = False
     if AIThinking:
         AIProcess.terminate()
+        AIProcess.join()
+        AIProcess.close()
         AIThinking = False
     playerTurn = (gameState.whiteTurn and whitePlayer) or (not gameState.whiteTurn and blackPlayer)
     drawGameState()
@@ -100,8 +108,8 @@ def mouseOnClick(event):
             column = x // SQ_SIZE
             row = y // SQ_SIZE
             if not playerColor:
-                column = Engine.DIMENSION - column - 1
-                row = Engine.DIMENSION - row - 1
+                column = DIMENSION - column - 1
+                row = DIMENSION - row - 1
             if selectedSq == (column, row) or column > 7 or column < 0 or row > 7 or row < 0:
                 selectedSq = ()
                 clicks = []
@@ -109,9 +117,9 @@ def mouseOnClick(event):
                 selectedSq = (column, row)
                 clicks.append(selectedSq)
             if len(clicks) == 2 and playerTurn:
-                startSq = Engine.bbOfSquares[clicks[0][1]][clicks[0][0]]
-                endSq = Engine.bbOfSquares[clicks[1][1]][clicks[1][0]]
-                move = Engine.Move(startSq, endSq, gameState)
+                startSq = bbOfSquares[clicks[0][1]][clicks[0][0]]
+                endSq = bbOfSquares[clicks[1][1]][clicks[1][0]]
+                move = Move(startSq, endSq, gameState)
                 for validMove in validMoves:
                     if move == validMove:
                         gameState.makeMove(validMove)
@@ -139,7 +147,7 @@ def AIControl():
             print("thinking...")
             print(validMoves)
             AIThinking = True
-            AIProcess = Process(target=AI.negaScoutMoveAI, args=(gameState, validMoves, returnQ))
+            AIProcess = Process(target=negaScoutMoveAI, args=(gameState, validMoves, returnQ))
             AIProcess.start()
         if not AIProcess.is_alive():
             AIMove, thinkingTime, positionCounter = returnQ.get()
@@ -149,7 +157,7 @@ def AIControl():
             print(f"Thinking time: {thinkingTime} s")
             print(f"Positions calculated: {positionCounter}")
             if AIMove is None:
-                AIMove = AI.randomMoveAI(validMoves)
+                AIMove = randomMoveAI(validMoves)
                 print("made a random move")
             gameState.makeMove(AIMove)
             moveMade = True
@@ -177,21 +185,21 @@ def gameOverCheck():
     elif gameState.stalemate:
         gameOver = True
         drawText("Stalemate")
-    if len(gameState.gameLog) == 40:
-        gameOver = True
+    # if len(gameState.gameLog) == 40:
+    #     gameOver = True
 
 
 def highlightSq():
     global gameState, selectedSq
     if selectedSq != ():
-        square = Engine.bbOfSquares[selectedSq[1]][selectedSq[0]]
+        square = bbOfSquares[selectedSq[1]][selectedSq[0]]
         piece = gameState.getPieceBySquare(square)
         if piece is not None:
             if playerColor:
                 canvas.create_image(selectedSq[0] * SQ_SIZE, selectedSq[1] * SQ_SIZE, anchor="nw", image=IMAGES["brown"], tags="move")
             else:
-                c = Engine.DIMENSION - 1 - selectedSq[0]
-                r = Engine.DIMENSION - 1 - selectedSq[1]
+                c = DIMENSION - 1 - selectedSq[0]
+                r = DIMENSION - 1 - selectedSq[1]
                 canvas.create_image(c * SQ_SIZE, r * SQ_SIZE, anchor="nw", image=IMAGES["brown"], tags="move")
             if piece[0] == ("w" if gameState.whiteTurn else "b"):
                 for move in validMoves:
@@ -199,8 +207,8 @@ def highlightSq():
                         if playerColor:
                             canvas.create_image((move.endLoc % 8) * SQ_SIZE, (move.endLoc // 8) * SQ_SIZE, anchor="nw", image=IMAGES["yellow"], tags="move")
                         else:
-                            r = Engine.DIMENSION - 1 - move.endLoc // 8
-                            c = Engine.DIMENSION - 1 - move.endLoc % 8
+                            r = DIMENSION - 1 - move.endLoc // 8
+                            c = DIMENSION - 1 - move.endLoc % 8
                             canvas.create_image(c * SQ_SIZE, r * SQ_SIZE, anchor="nw", image=IMAGES["yellow"], tags="move")
 
 
@@ -212,11 +220,11 @@ def highlightLastMove():
             canvas.create_image((lastMove.startLoc % 8) * SQ_SIZE, (lastMove.startLoc // 8) * SQ_SIZE, anchor="nw", image=IMAGES["blue"], tags="move")
             canvas.create_image((lastMove.endLoc % 8) * SQ_SIZE, (lastMove.endLoc // 8) * SQ_SIZE, anchor="nw", image=IMAGES["blue"], tags="move")
         else:
-            c = Engine.DIMENSION - 1 - lastMove.startLoc % 8
-            r = Engine.DIMENSION - 1 - lastMove.startLoc // 8
+            c = DIMENSION - 1 - lastMove.startLoc % 8
+            r = DIMENSION - 1 - lastMove.startLoc // 8
             canvas.create_image(c * SQ_SIZE, r * SQ_SIZE, anchor="nw", image=IMAGES["blue"], tags="move")
-            c = Engine.DIMENSION - 1 - lastMove.endLoc % 8
-            r = Engine.DIMENSION - 1 - lastMove.endLoc // 8
+            c = DIMENSION - 1 - lastMove.endLoc % 8
+            r = DIMENSION - 1 - lastMove.endLoc // 8
             canvas.create_image(c * SQ_SIZE, r * SQ_SIZE, anchor="nw", image=IMAGES["blue"], tags="move")
 
 
@@ -235,16 +243,16 @@ def drawBoard():
 def drawPieces():
     global gameState
     if playerColor:
-        for piece in Engine.COLORED_PIECES:
-            splitPositions = Engine.numSplit(gameState.bbOfPieces[piece])
+        for piece in COLORED_PIECES:
+            splitPositions = numSplit(gameState.bbOfPieces[piece])
             for position in splitPositions:
-                pos = Engine.getPower(position)
+                pos = getPower(position)
                 canvas.create_image((pos % 8) * SQ_SIZE, (pos // 8) * SQ_SIZE, anchor="nw", image=IMAGES[piece], tags="move")
     else:
-        for piece in Engine.COLORED_PIECES:
-            splitPositions = Engine.numSplit(gameState.bbOfPieces[piece])
+        for piece in COLORED_PIECES:
+            splitPositions = numSplit(gameState.bbOfPieces[piece])
             for position in splitPositions:
-                pos = 63 - Engine.getPower(position)
+                pos = 63 - getPower(position)
                 canvas.create_image((pos % 8) * SQ_SIZE, (pos // 8) * SQ_SIZE, anchor="nw", image=IMAGES[piece], tags="move")
 
 
