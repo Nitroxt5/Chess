@@ -1,4 +1,4 @@
-from TestDLL import getPower
+from TestDLL import getPower, numSplit
 import ctypes
 from random import randint
 from copy import deepcopy
@@ -40,15 +40,6 @@ bbOfCorrections = {"a": 0b011111110111111101111111011111110111111101111111011111
                    "12": 0b1111111111111111111111111111111111111111111111110000000000000000,
                    "8": 0b0000000011111111111111111111111111111111111111111111111111111111,
                    "78": 0b0000000000000000111111111111111111111111111111111111111111111111}
-
-
-def numSplit(number: int):
-    result = []
-    while number:
-        tmp = number & -number
-        result.append(tmp)
-        number -= tmp
-    return result
 
 
 class GameState:

@@ -1,10 +1,10 @@
-from TestDLL import getPower
+from TestDLL import getPower, numSplit
 import tkinter as tk
 from PIL import Image, ImageTk
 from math import ceil, floor
 from multiprocessing import Process, Queue
 from AI import negaScoutMoveAI, randomMoveAI
-from Engine import COLORED_PIECES, DIMENSION, GameState, Move, bbOfSquares, numSplit
+from Engine import COLORED_PIECES, DIMENSION, GameState, Move, bbOfSquares
 
 
 BOARD_WIDTH = BOARD_HEIGHT = 512

@@ -1,5 +1,21 @@
 #include <Python.h>
 
+static PyObject* numSplit(PyObject* self, PyObject* args)
+{
+    unsigned long long number;
+    if (!PyArg_ParseTuple(args, "K", &number))
+        return NULL;
+    PyObject* result = PyList_New(0);
+    while (number)
+    {
+        unsigned long long tmp = number & (0 - number);
+        PyObject* pyTmp = PyLong_FromUnsignedLongLong(tmp);
+        PyList_Append(result, pyTmp);
+        number -= tmp;
+    }
+    return result;
+}
+
 static PyObject* getPower(PyObject* self, PyObject* args)
 {
     unsigned long long number;
@@ -32,6 +48,7 @@ static PyObject* getBitsCount(PyObject* self, PyObject* args)
 }
 
 static PyMethodDef TestDLL_methods[] = {
+    { "numSplit", (PyCFunction)numSplit, METH_VARARGS, ""},
     { "getPower", (PyCFunction)getPower, METH_VARARGS, ""},
     { "getBitsCount", (PyCFunction)getBitsCount, METH_VARARGS, ""},
     { NULL, NULL, 0, NULL }

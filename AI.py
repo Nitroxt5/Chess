@@ -1,13 +1,12 @@
-from TestDLL import getBitsCount, getPower
+from TestDLL import getBitsCount, getPower, numSplit
 from random import randint
 from time import perf_counter
-from Engine import GameState, Move, bbOfRows, bbOfColumns, bbOfCorrections, bbOfCenter, COLORS, CASTLE_SIDES, pieceScores, numSplit
+from Engine import GameState, Move, bbOfRows, bbOfColumns, bbOfCorrections, bbOfCenter, COLORS, CASTLE_SIDES, pieceScores
 from multiprocessing import Queue
 
 CHECKMATE = 100000
 STALEMATE = 0
 DEPTH = 4
-MAX_DEPTH = 7
 R = 1 if DEPTH <= 3 else 2
 nextMove = None
 counter = 0
