@@ -7,7 +7,7 @@ from multiprocessing import Queue
 CHECKMATE = 100000
 STALEMATE = 0
 DEPTH = 4
-MAX_DEPTH = 6
+MAX_DEPTH = 7
 R = 1 if DEPTH <= 3 else 2
 nextMove = None
 counter = 0
@@ -84,11 +84,11 @@ def negaScoutMoveAI(gameState: GameState, validMoves: list, returnQ: Queue):
         if len(validMoves) > 8:
             for d in range(DEPTH):
                 currentDepth = d + 1
-                score = negaScoutAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, currentDepth, currentDepth, 0)
+                score = negaScoutAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, currentDepth, currentDepth)
                 if score == CHECKMATE:
                     break
         else:
-            negaScoutAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, DEPTH, DEPTH, 0)
+            negaScoutAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, DEPTH, DEPTH)
     thinkingTime = perf_counter() - start
     returnQ.put((nextMove, thinkingTime, counter))
 
@@ -104,9 +104,8 @@ def oneDepthSearch(gameState: GameState, validMoves: list, turn: int, depth: int
             gameState.undoMove()
 
 
-def negaScoutAI(gameState: GameState, validMoves: list, alpha: int, beta: int, turn: int, depth: int, globalDepth: int, calls: int):
+def negaScoutAI(gameState: GameState, validMoves: list, alpha: int, beta: int, turn: int, depth: int, globalDepth: int):
     global nextMove, counter
-    calls += 1
     counter += 1
     if depth <= 0 or gameState.checkmate:
         return turn * scoreBoard(gameState, validMoves)
@@ -132,15 +131,12 @@ def negaScoutAI(gameState: GameState, validMoves: list, alpha: int, beta: int, t
                 nextMoves = gameState.getValidMoves()
                 hashTableForValidMoves[(gameState.boardHash, gameState.whiteTurn)] = nextMoves
             if depth == DEPTH or move.isCapture or gameState.isWhiteInCheck or gameState.isBlackInCheck:
-                deepening = 1
-                if depth == DEPTH or calls + DEPTH >= MAX_DEPTH:
-                    deepening = 1
-                score = -negaScoutAI(gameState, nextMoves, -beta, -alpha, -turn, depth - deepening, globalDepth, calls)
+                score = -negaScoutAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1, globalDepth)
             else:
                 silentMoveCounter -= 1
-                score = -negaScoutAI(gameState, nextMoves, -alpha - 1, -alpha, -turn, depth - R, globalDepth, calls)
+                score = -negaScoutAI(gameState, nextMoves, -alpha - 1, -alpha, -turn, depth - R, globalDepth)
                 if alpha < score < beta:
-                    score = -negaScoutAI(gameState, nextMoves, -beta, -score, -turn, depth - 1, globalDepth, calls)
+                    score = -negaScoutAI(gameState, nextMoves, -beta, -score, -turn, depth - 1, globalDepth)
         gameState.undoMove()
         if score > alpha:
             alpha = score

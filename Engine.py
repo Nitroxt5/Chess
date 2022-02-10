@@ -97,6 +97,7 @@ class GameState:
         self.enpassantSq = 0
         self.enpassantSqLog = [self.enpassantSq]
         self.currentCastlingRight = 0b1111
+        # self.currentCastlingRight = 0b0
         self.castleRightsLog = [self.currentCastlingRight]
         self.isWhiteCastled = False
         self.isBlackCastled = False
