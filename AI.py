@@ -13,7 +13,7 @@ counter = 0
 hashTableForBestMoves = {}
 hashTableForValidMoves = {}
 killerMoves = {}
-posMargin = {1: 300, 2: 700}
+posMargin = {1: 350, 2: 800}
 
 knightPositionScore = [[1, 2, 1, 1, 1, 1, 2, 1],
                        [1, 2, 2, 2, 2, 2, 2, 1],
@@ -135,10 +135,7 @@ def negaScoutAI(gameState: GameState, validMoves: list, alpha: int, beta: int, t
                 if alpha < score < beta:
                     score = -negaScoutAI(gameState, nextMoves, -beta, -score, -turn, depth - 1, globalDepth, globalLength)
         gameState.undoMove()
-        if depth <= 2 and globalLength > 8:
-            if score <= alpha - posMargin[depth] and not (move.isCapture or gameState.isWhiteInCheck or gameState.isBlackInCheck) and globalDepth >= 4:
-                killerMoves[depth] = move.moveID
-                break
+        prevAlpha = alpha
         if score > alpha:
             alpha = score
             if (gameState.boardHash, gameState.whiteTurn) in hashTableForBestMoves:
@@ -158,6 +155,9 @@ def negaScoutAI(gameState: GameState, validMoves: list, alpha: int, beta: int, t
         if alpha >= beta:
             killerMoves[depth] = move.moveID
             break
+        if depth <= 2 and globalLength > 8:
+            if score <= prevAlpha - posMargin[depth] and not (move.isCapture or gameState.isWhiteInCheck or gameState.isBlackInCheck) and globalDepth >= 4:
+                break
     return alpha
 
 
