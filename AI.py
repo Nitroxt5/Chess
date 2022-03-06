@@ -10,12 +10,10 @@ DEPTH = 4
 R = 1 if DEPTH <= 3 else 2
 nextMove = None
 counter = 0
-threatCost = 2
-protectionCost = 2
 hashTableForBestMoves = {}
 hashTableForValidMoves = {}
 killerMoves = {}
-
+posMargin = {1: 300, 2: 700}
 
 knightPositionScore = [[1, 2, 1, 1, 1, 1, 2, 1],
                        [1, 2, 2, 2, 2, 2, 2, 1],
@@ -83,11 +81,11 @@ def negaScoutMoveAI(gameState: GameState, validMoves: list, returnQ: Queue):
         if len(validMoves) > 8:
             for d in range(DEPTH):
                 currentDepth = d + 1
-                score = negaScoutAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, currentDepth, currentDepth)
+                score = negaScoutAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, currentDepth, currentDepth, len(validMoves))
                 if score == CHECKMATE:
                     break
         else:
-            negaScoutAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, DEPTH, DEPTH)
+            negaScoutAI(gameState, validMoves, -CHECKMATE - 1, CHECKMATE + 1, 1 if gameState.whiteTurn else -1, DEPTH, DEPTH, len(validMoves))
     thinkingTime = perf_counter() - start
     returnQ.put((nextMove, thinkingTime, counter))
 
@@ -103,7 +101,7 @@ def oneDepthSearch(gameState: GameState, validMoves: list, turn: int, depth: int
             gameState.undoMove()
 
 
-def negaScoutAI(gameState: GameState, validMoves: list, alpha: int, beta: int, turn: int, depth: int, globalDepth: int):
+def negaScoutAI(gameState: GameState, validMoves: list, alpha: int, beta: int, turn: int, depth: int, globalDepth: int, globalLength: int):
     global nextMove, counter
     counter += 1
     if depth <= 0 or gameState.checkmate:
@@ -130,13 +128,17 @@ def negaScoutAI(gameState: GameState, validMoves: list, alpha: int, beta: int, t
                 nextMoves = gameState.getValidMoves()
                 hashTableForValidMoves[(gameState.boardHash, gameState.whiteTurn)] = nextMoves
             if depth == DEPTH or move.isCapture or gameState.isWhiteInCheck or gameState.isBlackInCheck:
-                score = -negaScoutAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1, globalDepth)
+                score = -negaScoutAI(gameState, nextMoves, -beta, -alpha, -turn, depth - 1, globalDepth, globalLength)
             else:
                 silentMoveCounter -= 1
-                score = -negaScoutAI(gameState, nextMoves, -alpha - 1, -alpha, -turn, depth - R, globalDepth)
+                score = -negaScoutAI(gameState, nextMoves, -alpha - 1, -alpha, -turn, depth - R, globalDepth, globalLength)
                 if alpha < score < beta:
-                    score = -negaScoutAI(gameState, nextMoves, -beta, -score, -turn, depth - 1, globalDepth)
+                    score = -negaScoutAI(gameState, nextMoves, -beta, -score, -turn, depth - 1, globalDepth, globalLength)
         gameState.undoMove()
+        if depth <= 2 and globalLength > 8:
+            if score <= alpha - posMargin[depth] and not (move.isCapture or gameState.isWhiteInCheck or gameState.isBlackInCheck) and globalDepth >= 4:
+                killerMoves[depth] = move.moveID
+                break
         if score > alpha:
             alpha = score
             if (gameState.boardHash, gameState.whiteTurn) in hashTableForBestMoves:
@@ -166,7 +168,7 @@ def scoreProtectionsAndThreats(gameState: GameState):
     blackProtections = gameState.bbOfThreats["b"] & gameState.bbOfOccupiedSquares["b"]
     threatsDifference = getBitsCount(whiteThreats) - getBitsCount(blackThreats)
     protectionsDifference = getBitsCount(whiteProtections) - getBitsCount(blackProtections)
-    return threatsDifference * threatCost + protectionsDifference * protectionCost
+    return threatsDifference * 2 + protectionsDifference * 2
 
 
 def scoreRookPositioning(gameState: GameState):

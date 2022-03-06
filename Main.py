@@ -185,8 +185,8 @@ def gameOverCheck():
     elif gameState.stalemate:
         gameOver = True
         drawText("Stalemate")
-    # if len(gameState.gameLog) == 40:
-    #     gameOver = True
+    if len(gameState.gameLog) == 40:
+        gameOver = True
 
 
 def highlightSq():
